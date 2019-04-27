@@ -3,7 +3,6 @@ import numpy as np
 import snake
 import network
 import random
-import pprint
 
 class World():
     def __init__(self, dim, this_snake=None, foods=None, obstacles=None):
@@ -21,7 +20,7 @@ class World():
         if self.obstacles is None:
             self.obstacles = []
 
-        self.EMPTY = ''
+        self.EMPTY = ' '
         self.FOOD = 'x'
         self.OBSTACLE = '='
         self.FOOD_SCORE = width + height
@@ -29,7 +28,7 @@ class World():
         self.EMPTY_SCORE = -1 # penalize moving onto empty fields
 
     def get_map(self):
-        world_map = np.empty(self.dim, dtype=str)
+        world_map = np.full(self.dim, self.EMPTY)
         for coord, segment in zip(self.snake.coords, self.snake.segments):
             world_map[coord] = segment
         for food in self.foods:
@@ -39,7 +38,7 @@ class World():
         return world_map
 
     def get_state(self):
-        return self.get_map().flatten()
+        return np.array([ord(x) for x in self.get_map().flatten()], ndmin=2)
 
     def get_future_state(self, action):
         pass
@@ -63,12 +62,12 @@ class World():
         
 def simu_for_training(dim, n):
     height, width = dim
-    simus = []
+    simu_states = []
+    simu_rewards = []
     for _ in range(n):
         i,j = random.randint(0, height -1), random.randint(0, width -1)
         world = World(dim, snake.Snake((i,j)))
         world_map = world.get_map()
-        #pprint.pprint(world_map)
         state = world.get_state()
         rewards = []
         for action in world.snake.action_space:
@@ -76,22 +75,19 @@ def simu_for_training(dim, n):
             world.snake.move()
             rewards.append(world.score(world_map, world.snake.coords[0])) # fix snake mv for list of coords
             world.snake.coords = [(i,j)]
-        #pprint.pprint(rewards)
-        simus.append((state, rewards))
-    return simus
+        simu_states.append(state)
+        simu_rewards.append(rewards)
+    return simu_states, simu_rewards
 
 
 def main():
-    print("init world")
     world = World((5,5))
-    print("init network")
-    net = network.Network()
-    print("done")
+    training_dir = '01'
+    net = network.Network(training_dir)
 
-    print("simus returned:")
-    print(simu_for_training(world.dim, 1))
-    simu_state, simu_reward = simu_for_training(world.dim, 1)[0]
+    simu_states, simu_rewards = simu_for_training(world.dim, 5)
     print(world.get_next_action(net))
+    net.train(simu_states, simu_rewards)
 
 
 main()

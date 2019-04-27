@@ -9,7 +9,7 @@ class Network():
         # input = map / state of the world
         # output = expected reward for each possible action
         self.model = keras.Sequential([
-            keras.layers.Flatten(),
+            keras.layers.Flatten(input_shape=(25,)),
             keras.layers.Dense(25, activation=tf.nn.relu),
             keras.layers.Dense(25, activation=tf.nn.relu),
             keras.layers.Dense(4, activation=None) #tf.nn.softmax
@@ -35,7 +35,9 @@ class Network():
 
     def get_action(self, state):
         # using state, predict snake action rewards and pick the expected optimal action
+        print(state)
         expected_reward = self.predict(state)
+        print(expected_reward)
         return np.argmax(expected_reward) -1
 
     def predict(self, state): # if only used for get_action(), directly code above and rm this one
