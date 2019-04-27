@@ -1,62 +1,43 @@
-import pygame
-import numpy as np
 
 class Snake:
-    def __init__(self, color, x, y, blocksize):
-        self.color = color
-        self.x = x
-        self.y = y
-        self.width = blocksize
-        self.direction = 'right'
+    def __init__(self, pos, direction=None):
+        self.coords = [pos]
         self.alive = True
-        self.fov = 10 # field of view
-        self.state = None
-        self.last_reward = None
-        self.total_reward = 0
-
-    def draw(self, surface):
-        pygame.draw.rect(surface, self.color, (self.x, self.y, self.width, self.width))
-
-    def set_direction(self, direction):
+        self.action_space = ['right', 'down', 'left', 'up']
         self.direction = direction
+        if not self.direction:
+            self.direction = self.action_space[0] # set to None, pause game on init until first direction is given
+        self.previous_action = None
 
-    def move(self, world):
+        self.HEAD = ':'
+        self.BODY = 'o'
+        self.TAIL = 's'
+        self.segments = self.get_segments() # str representation of snake
+
+    def get_segments(self):
+        inner_segments = self.BODY * (len(self.coords) -2)
+        return self.HEAD + inner_segments + self.TAIL
+
+    def set_direction(self, new_direction):
+        self.direction = new_direction
+
+
+    def move(self):
+        y,x = self.coords[0]
         if self.direction == 'right':
-            self.x = self.x + self.width
+            x += 1
         elif self.direction == 'left':
-            self.x = self.x - self.width
+            x -= 1
         elif self.direction == 'down':
-            self.y = self.y + self.width
+            y += 1
         elif self.direction == 'up':
-            self.y = self.y - self.width
+            y -= 1
+        self.coords[0] = (y,x)
+        # fix for len > 1!
+        self.previous_action = self.direction
+
         
-        if self.moved_out_of_window(world.surface):
-            self.die()
-        self.set_reward(world) 
-
-    def moved_out_of_window(self, surface):
-        if self.x < 0 or self.x > surface.get_width() - self.width or self.y < 0 or self.y > surface.get_height() - self.width:
-            return True
-        return False
-
     def die(self):
         print("You died!")
         self.alive = False
-
-    def set_reward(self, world):
-        if not self.alive:
-            self.last_reward = -1
-        elif (self.y, self.x) in world.foods:
-            self.last_reward = 10
-        else:
-            self.last_reward = 1
-        self.total_reward += self.last_reward
-
-    def set_state(self, full_state):
-        padded_state = np.pad(full_state, self.fov, 'constant', constant_values=-1)
-        normed_x = int(self.x / self.width)
-        normed_y = int(self.y / self.width)
-        self.state = padded_state[normed_y:(normed_y + 2*self.fov +1), normed_x:(normed_x + 2*self.fov +1)]
-        #print(self.state)
-        #print(self.state.size)
 

@@ -5,14 +5,14 @@ import os
 import glob
 
 class Network():
-    def __init__(self, world):  
-        # network structure
-        # input = state from world
-        # output = action for snake (direction to move in)
+    def __init__(self, chkpt="training"):  
+        # input = map / state of the world
+        # output = expected reward for each possible action
         self.model = keras.Sequential([
-            keras.layers.Flatten(input_shape=world.snake.state.shape),
-            keras.layers.Dense(5, activation=tf.nn.relu),
-            keras.layers.Dense(4, activation=tf.nn.softmax)
+            keras.layers.Flatten(),
+            keras.layers.Dense(25, activation=tf.nn.relu),
+            keras.layers.Dense(25, activation=tf.nn.relu),
+            keras.layers.Dense(4, activation=None) #tf.nn.softmax
         ])
 
         self.model.compile(optimizer='adam',
@@ -20,7 +20,7 @@ class Network():
                   metrics=['accuracy'])
 
         # check point saving
-        checkpoint_path = "training_01/cp.ckpt"
+        checkpoint_path = chkpt + os.path.sep + "cp.ckpt"
         checkpoint_dir = os.path.dirname(checkpoint_path)
         self.cp_callback = tf.keras.callbacks.ModelCheckpoint(checkpoint_path, 
                                                          save_weights_only=True,
@@ -33,35 +33,24 @@ class Network():
             print("No checkpoint loaded!")
             pass
 
-    def get_direction(self, world):
-        # using state, predict action for snake
-        prediction = self.predict(world)
-        directions = ['right', 'down', 'left', 'up']
-        return directions[prediction]
+    def get_action(self, state):
+        # using state, predict snake action rewards and pick the expected optimal action
+        expected_reward = self.predict(state)
+        return np.argmax(expected_reward) -1
 
-    def predict(self, world):
-        #print('predict')
-        #print(world.snake.state)
-        #print(world.snake.state.shape)
-        #print(np.expand_dims(world.snake.state, 0))
-        #print(np.expand_dims(world.snake.state, 0).shape)
-        #print('actual prediction:')
-        #print(self.model.predict(np.expand_dims(world.snake.state, 0)))
-        return np.argmax(self.model.predict(np.expand_dims(world.snake.state, 0))) -1
+    def predict(self, state): # if only used for get_action(), directly code above and rm this one
+        return self.model.predict(state)
 
-    # fix this, so I can actually learn on an entire batch
-    def train(self, states, actions, epochs=2):
-        directions = ['right', 'down', 'left', 'up']
-        for _ in range(epochs):
-            for state, action in zip(states, actions):
-                self.model.fit(
-                        np.expand_dims(state, 0), 
-                        np.expand_dims(directions.index(action), 0), 
-                        epochs=1,
-                        callbacks=[self.cp_callback],
-                        )
 
-    def eval(self, states, actions):
-        test_loss, test_acc = self.model.evaluate(states, actions)
+    def train(self, states, rewards, epochs=1):
+        self.model.fit(
+                states,
+                rewards,
+                epochs=epochs,
+                callbacks=[self.cp_callback],
+                )
+
+    def eval(self, states, rewards):
+        test_loss, test_acc = self.model.evaluate(states, rewards)
         print('Test accuracy:', test_acc)
 

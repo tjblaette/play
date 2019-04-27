@@ -1,131 +1,100 @@
-import pygame
-from pygame.locals import *
 import sys
 import numpy as np
 import snake
 import network
 import random
+import pprint
 
 class World():
-    def __init__(self, blocksize=10):
-        self.RED = (255, 0, 0)
-        self.GREEN = (0, 255, 0)
-        self.BLUE = (0, 0, 255)
-        self.WHITE = (255, 255, 255)
-        self.BLACK = (0, 0, 0)
+    def __init__(self, dim, this_snake=None, foods=None, obstacles=None):
+        self.dim = dim
+        width, height = self.dim
 
-        pygame.init()
-        self.BLOCKSIZE = blocksize
-        self.surface = pygame.display.set_mode((self.BLOCKSIZE*10, self.BLOCKSIZE*10))
-        pygame.display.set_caption("Let's play snake!")
-        self.surface.fill(self.WHITE)
+        self.snake = this_snake
+        self.foods = foods
+        self.obstacles = obstacles
 
-        self.FPS = 20
-        self.clock = pygame.time.Clock()
+        if not self.snake:
+            self.snake = snake.Snake((random.randint(0, height-1), random.randint(0, width-1)))
+        if self.foods is None:
+            self.foods = []
+        if self.obstacles is None:
+            self.obstacles = []
 
-        self.snake = snake.Snake(self.BLUE, random.randint(0,self.surface.get_height() - self.BLOCKSIZE), random.randint(0,self.surface.get_width() - self.BLOCKSIZE), self.BLOCKSIZE) 
-        self.snake.set_state(self.get_state())
-        self.network = network.Network(self)
-        self.obstacles = []
-        self.foods = []
+        self.EMPTY = ''
+        self.FOOD = 'x'
+        self.OBSTACLE = '='
+        self.FOOD_SCORE = width + height
+        self.OBSTACLE_SCORE = -self.FOOD_SCORE
+        self.EMPTY_SCORE = -1 # penalize moving onto empty fields
 
+    def get_map(self):
+        world_map = np.empty(self.dim, dtype=str)
+        for coord, segment in zip(self.snake.coords, self.snake.segments):
+            world_map[coord] = segment
+        for food in self.foods:
+            world_map[food] = self.FOOD
+        for obst in self.obstacles:
+            world_map[obst] = self.OBSTACLE
+        return world_map
 
     def get_state(self):
-        state = pygame.surfarray.array2d(self.surface).swapaxes(0,1)
-        state = state[::self.BLOCKSIZE, ::self.BLOCKSIZE]
-        return state
+        return self.get_map().flatten()
 
-    def update(self):
-        if self.snake.alive:
-            self.snake.draw(self.surface)
-            full_state = self.get_state()
-            pygame.display.update()
-            self.snake.set_state(full_state)
-            self.clock.tick(self.FPS)
+    def get_future_state(self, action):
+        pass
 
-    def move(self):
-        if self.snake.alive:
-            self.snake.move(self)
+    def get_next_action(self, network):
+        network.get_action(self.get_state())
 
-def game_over(states, actions, last_rewards, total_rewards):
-    pygame.quit()
-    print("non-lethal states: {}".format(len(states)))
-    return states, actions, last_rewards, total_rewards
+    # mv to Snake --> needs to know whether to grow on move or die, keep reward as snake.reward
+    def score(self, world_map, coord):
+        x,y = coord
+        if x < 0 or y < 0 or x >= world_map.shape[0] or y >= world_map.shape[1]:
+            return self.OBSTACLE_SCORE # and snake.die()
+        field_to_score = world_map[coord]
+        if field_to_score == self.FOOD:
+            return self.FOOD_SCORE
+        if field_to_score == self.EMPTY:
+            return self.EMPTY_SCORE
+        return self.OBSTACLE_SCORE # and snake.die()
+        # extend: penalize not empty field but change of direction, to favor bigger movements / laziness?  --> input current state AND previous action into network
 
-
-def play():
-    world = World()
-    world.update()
-    paused = False
-
-    states = []
-    actions = []
-    last_rewards = []
-    total_rewards = []
-
-    while True:
-        world.surface.fill(world.WHITE)
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                return game_over(states, actions, last_rewards, total_rewards)
-            if event.type == KEYUP:
-                if event.key == K_SPACE:
-                    paused = False
-                if event.key == K_w or event.key == K_UP:
-                    world.snake.set_direction('up')
-                if event.key == K_s or event.key == K_DOWN:
-                    world.snake.set_direction('down')
-                if event.key == K_d or event.key == K_RIGHT:
-                    world.snake.set_direction('right')
-                if event.key == K_a or event.key == K_LEFT:
-                    world.snake.set_direction('left')
-        if not paused and world.snake.alive:
-            #print('get prediction from network')
-            #print(world.network.get_direction(world))
-            states.append(world.snake.state)
-            world.snake.set_direction(world.network.get_direction(world))
-            actions.append(world.snake.direction)
-            world.move()
-            last_rewards.append(world.snake.last_reward)
-            total_rewards.append(world.snake.total_reward)
-            world.update()
-        elif not world.snake.alive:
-            return game_over(states, actions, last_rewards, total_rewards)
+        
+def simu_for_training(dim, n):
+    height, width = dim
+    simus = []
+    for _ in range(n):
+        i,j = random.randint(0, height -1), random.randint(0, width -1)
+        world = World(dim, snake.Snake((i,j)))
+        world_map = world.get_map()
+        #pprint.pprint(world_map)
+        state = world.get_state()
+        rewards = []
+        for action in world.snake.action_space:
+            world.snake.set_direction(action)
+            world.snake.move()
+            rewards.append(world.score(world_map, world.snake.coords[0])) # fix snake mv for list of coords
+            world.snake.coords = [(i,j)]
+        #pprint.pprint(rewards)
+        simus.append((state, rewards))
+    return simus
 
 
 def main():
-    states = []
-    actions = []
-    last_rewards = []
-    total_rewards = []
-    should_train = True
+    print("init world")
+    world = World((5,5))
+    print("init network")
+    net = network.Network()
+    print("done")
 
-    for _ in range(30):
-        print(_)
-        new_states, new_actions, new_last_rewards, new_total_rewards = play()
+    print("simus returned:")
+    print(simu_for_training(world.dim, 1))
+    simu_state, simu_reward = simu_for_training(world.dim, 1)[0]
+    print(world.get_next_action(net))
 
-        # the final action was lethal 
-        # --> for training, propose a different action (which is hopefully non-lethal)
-        action_space = ['right', 'down', 'left', 'up']
-        new_actions[-1] = [action for action in action_space if action != new_actions[-1]][random.randint(0,2)]
-
-        states = states + new_states
-        actions = actions + new_actions
-        last_rewards = last_rewards + new_last_rewards
-        total_rewards = total_rewards + new_total_rewards
-
-        # train on those (sequences of) states that achieved a high reward
-        # --> hopefully, this will improve model over time?
-        median_total_reward = np.median(total_rewards)
-        print("median total reward: {}".format(median_total_reward))
-        states_for_training = [state for state, reward in zip(states, total_rewards) if reward <= median_total_reward]
-        actions_for_training = [action for action, reward in zip(actions, total_rewards) if reward <= median_total_reward]
-
-    if should_train:
-        world = World()
-        world.network.train(states_for_training, actions_for_training)
-
-    pygame.quit()
-    sys.exit()
 
 main()
+    
+
+
