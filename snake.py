@@ -18,6 +18,7 @@ class Snake:
         self.BODY = 'o'
         self.TAIL = 's'
         self.segments = self.get_segments() # str representation of snake
+        self.grow_on_next_move = False
 
     def get_segments(self):
         inner_segments = self.BODY * (len(self.pos) -2)
@@ -29,6 +30,11 @@ class Snake:
     def reward(self, score):
         self.last_reward = score
         self.total_reward += score
+
+    def grow(self):
+        # grow
+        self.grow_on_next_move = False
+        pass
 
     def move(self):
         y,x = self.pos[0]

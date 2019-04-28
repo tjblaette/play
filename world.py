@@ -86,8 +86,9 @@ class World():
             self.snake.reward(self.OBSTACLE_SCORE)
             self.snake.die()
         elif self.is_snake_at_food():
+            # reset food coord
             self.snake.reward(self.FOOD_SCORE)
-            # self.snake.grow()
+            # self.snake.grow_on_next_move = True
         elif self.is_snake_in_obstacle():
             self.snake.reward(self.OBSTACLE_SCORE)
             self.snake.die()
