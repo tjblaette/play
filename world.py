@@ -43,16 +43,18 @@ class World():
         return world_map
 
     def draw(self):
-        
+        pass
 
     def get_state(self):
-        return np.array([ord(x) for x in self.get_map().flatten()], ndmin=2)
+        return [ord(x) for x in self.get_map().flatten()]
+        #return np.array([ord(x) for x in self.get_map().flatten()], ndmin=2)
 
     def get_future_state(self, action):
         pass
 
     def get_next_action(self, network):
-        network.get_action(self.get_state())
+        current_state = self.get_state()
+        return network.get_action(np.array(current_state, ndmin=2))
 
     # mv to Snake --> needs to know whether to grow on move or die, keep reward as snake.reward
     def score(self, world_map, coord):
@@ -85,17 +87,21 @@ def simu_for_training(dim, n):
             world.snake.coords = [(i,j)]
         simu_states.append(state)
         simu_rewards.append(rewards)
+    simu_states = np.array(simu_states)
+    simu_rewards = np.array(simu_rewards)
+        
     return simu_states, simu_rewards
 
 
 def main():
     world = World((5,5))
-    training_dir = '01'
+    training_dir = '03'
     net = network.Network(training_dir)
 
     simu_states, simu_rewards = simu_for_training(world.dim, 5)
     print(world.get_next_action(net))
     net.train(simu_states, simu_rewards)
+    net.get_action(simu_states)
 
 
 main()
