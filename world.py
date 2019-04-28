@@ -12,23 +12,23 @@ class World():
         self.dim = dim
         width, height = self.dim
 
+        self.EMPTY = ' '
+        self.FOOD = 'x'
+        self.OBSTACLE = '='
+        self.FOOD_SCORE = sum(self.dim)
+        self.OBSTACLE_SCORE = -self.FOOD_SCORE
+        self.EMPTY_SCORE = -1 # penalize moving onto empty fields
+
         self.snake = this_snake
         self.foods = foods
         self.obstacles = obstacles
 
         if not self.snake:
-            self.snake = snake.Snake((random.randint(0, height-1), random.randint(0, width-1)))
+            self.snake = snake.Snake(self.random_empty_field())
         if self.foods is None:
-            self.foods = []
+            self.foods = [self.random_empty_field()]
         if self.obstacles is None:
             self.obstacles = []
-
-        self.EMPTY = ' '
-        self.FOOD = 'x'
-        self.OBSTACLE = '='
-        self.FOOD_SCORE = width + height
-        self.OBSTACLE_SCORE = -self.FOOD_SCORE
-        self.EMPTY_SCORE = -1 # penalize moving onto empty fields
 
         self.should_render = should_render
         if self.should_render:
@@ -37,13 +37,30 @@ class World():
 
     def get_map(self):
         world_map = np.full(self.dim, self.EMPTY)
-        for coord, segment in zip(self.snake.pos, self.snake.segments):
-            world_map[coord] = segment
-        for food in self.foods:
-            world_map[food] = self.FOOD
-        for obst in self.obstacles:
-            world_map[obst] = self.OBSTACLE
+        if self.foods:
+            for food in self.foods:
+                world_map[food] = self.FOOD
+        if self.snake:
+            for coord, segment in zip(self.snake.pos, self.snake.segments):
+                world_map[coord] = segment
+        if self.obstacles:
+            for obst in self.obstacles:
+                world_map[obst] = self.OBSTACLE
         return world_map
+
+    def get_empty_fields(self):
+        empty = []
+        world_map = self.get_map()
+        height, width = self.dim
+        for i in range(height):
+            for j in range(width):
+                if world_map[i,j] == self.EMPTY:
+                    empty.append((i,j))
+        return empty
+
+    def random_empty_field(self):
+        return random.choice(self.get_empty_fields())
+
 
     def render(self):
         pass
@@ -69,25 +86,30 @@ class World():
         return False
 
     def is_snake_at_food(self):
-        if self.snake.pos in self.foods:
-            print("Snake reached food")
-            return True
+        for food in self.foods:
+            if self.snake.pos[0] == food:
+                print("Snake reached food")
+                return True
         return False
 
     def is_snake_in_obstacle(self):
-        if self.snake.pos in self.obstacles:
+        if self.snake.pos[0] in self.obstacles:
             print("Snake ran into obstacle")
             return True
         return False
 
+    # adjust for > 1 food items
+    def update_foods(self):
+        self.foods = [self.random_empty_field()]
+
     # adjust for > 1 snake by passing snake as arg
-    def check_snake(self):
+    def update_snake(self):
         if self.is_snake_out_of_bounds():
             self.snake.reward(self.OBSTACLE_SCORE)
             self.snake.die()
         elif self.is_snake_at_food():
-            # reset food coord
             self.snake.reward(self.FOOD_SCORE)
+            self.update_foods()
             # self.snake.grow_on_next_move = True
         elif self.is_snake_in_obstacle():
             self.snake.reward(self.OBSTACLE_SCORE)
@@ -108,42 +130,49 @@ def simu_for_training(dim, n):
         rewards = []
         pprint.pprint(world_map)
         for action in world.snake.ACTION_SPACE:
-            print(action)
+            print("action to simulate: {}".format(action))
             world.snake.set_direction(action)
             world.snake.move()
-            world.check_snake()
+            world.update_snake()
             rewards.append(world.snake.last_reward)
             # reset snake for next simulated action
             world.snake.pos = [(i,j)]
+        print("rewards obtained: {}".format(rewards))
         simu_states.append(state)
         simu_rewards.append(rewards)
     simu_states = np.array(simu_states)
     simu_rewards = np.array(simu_rewards)
-        
+
     return simu_states, simu_rewards
 
 
 def main():
     world = World((5,5))
-    training_dir = '08'
+    training_dir = '14'
     net = network.Network(training_dir)
 
-    simu_states, simu_rewards = simu_for_training(world.dim, 10000)
     print("TRAIN")
-    net.train(simu_states, simu_rewards)
+#    simu_states, simu_rewards = simu_for_training(world.dim, 10000)
+#    net.train(simu_states, simu_rewards)
+
     print("PREDICT multi")
+    simu_states, simu_rewards = simu_for_training(world.dim, 5)
     net.get_action(simu_states)
+
     print("PREDICT single")
-    print(world.get_next_action(net))
+    simu_states, simu_rewards = simu_for_training(world.dim, 1)
+    net.get_action(simu_states)
+
 
     while world.snake.alive:
         world_map = world.get_map()
-        next_action = world.get_next_action(net)
+        print("active world:")
         pprint.pprint(world_map)
+        next_action = world.get_next_action(net)
 
         world.snake.set_direction(next_action)
         world.snake.move()
-        world.check_snake()
+        world.update_snake()
         time.sleep(2)
 
 
