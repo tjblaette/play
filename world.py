@@ -2,10 +2,11 @@ import sys
 import numpy as np
 import snake
 import network
+import visworld
 import random
 
 class World():
-    def __init__(self, dim, this_snake=None, foods=None, obstacles=None):
+    def __init__(self, dim, this_snake=None, foods=None, obstacles=None, render=False):
         self.dim = dim
         width, height = self.dim
 
@@ -27,6 +28,10 @@ class World():
         self.OBSTACLE_SCORE = -self.FOOD_SCORE
         self.EMPTY_SCORE = -1 # penalize moving onto empty fields
 
+        if render:
+            self.vis = visworld.Vis(self.dim, self.BLOCKSIZE)
+
+
     def get_map(self):
         world_map = np.full(self.dim, self.EMPTY)
         for coord, segment in zip(self.snake.coords, self.snake.segments):
@@ -36,6 +41,9 @@ class World():
         for obst in self.obstacles:
             world_map[obst] = self.OBSTACLE
         return world_map
+
+    def draw(self):
+        
 
     def get_state(self):
         return np.array([ord(x) for x in self.get_map().flatten()], ndmin=2)
