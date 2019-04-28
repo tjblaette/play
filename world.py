@@ -46,15 +46,16 @@ class World():
         pass
 
     def get_state(self):
-        return [ord(x) for x in self.get_map().flatten()]
-        #return np.array([ord(x) for x in self.get_map().flatten()], ndmin=2)
+        world_map = self.get_map()
+        char_to_int = np.vectorize(lambda x: ord(x))
+        return char_to_int(world_map)
 
     def get_future_state(self, action):
         pass
 
     def get_next_action(self, network):
         current_state = self.get_state()
-        return network.get_action(np.array(current_state, ndmin=2))
+        return network.get_action(np.array(current_state, ndmin=3))
 
     # mv to Snake --> needs to know whether to grow on move or die, keep reward as snake.reward
     def score(self, world_map, coord):
@@ -98,10 +99,13 @@ def main():
     training_dir = '03'
     net = network.Network(training_dir)
 
-    simu_states, simu_rewards = simu_for_training(world.dim, 5)
-    print(world.get_next_action(net))
+    simu_states, simu_rewards = simu_for_training(world.dim, 3)
+    print("TRAIN")
     net.train(simu_states, simu_rewards)
+    print("PREDICT multi")
     net.get_action(simu_states)
+    print("PREDICT single")
+    print(world.get_next_action(net))
 
 
 main()

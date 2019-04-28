@@ -9,7 +9,7 @@ class Network():
         # input = map / state of the world
         # output = expected reward for each possible action
         self.model = keras.Sequential([
-            #keras.layers.Flatten(input_shape=(25,)),
+            keras.layers.Flatten(input_shape=(5,5)),
             keras.layers.Dense(25, activation=tf.nn.relu),
             keras.layers.Dense(25, activation=tf.nn.relu),
             keras.layers.Dense(4, activation=None) #tf.nn.softmax
