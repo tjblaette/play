@@ -10,7 +10,9 @@ class Snake:
         self.direction = direction
         if not self.direction:
             self.direction = self.ACTION_SPACE[0] # set to None, pause game on init until first direction is given
-        self.previous_action = None
+        self.last_action = None
+        self.last_reward = None
+        self.total_reward = 0
 
         self.HEAD = ':'
         self.BODY = 'o'
@@ -24,6 +26,9 @@ class Snake:
     def set_direction(self, new_direction):
         self.direction = new_direction
 
+    def reward(self, score):
+        self.last_reward = score
+        self.total_reward += score
 
     def move(self):
         y,x = self.pos[0]
@@ -37,7 +42,7 @@ class Snake:
             y -= 1
         self.pos[0] = (y,x)
         # fix for len > 1!
-        self.previous_action = self.direction # save direction that got snake to where it is now
+        self.last_action = self.direction # save direction that got snake to where it is now
 
         
     def die(self):

@@ -60,20 +60,41 @@ class World():
         current_state = self.get_state()
         return network.get_action(np.array(current_state, ndmin=3))
 
-    # mv to Snake --> needs to know whether to grow on move or die, keep reward as snake.reward
-    def score(self, world_map, coord):
-        x,y = coord
-        if x < 0 or y < 0 or x >= world_map.shape[0] or y >= world_map.shape[1]:
-            return self.OBSTACLE_SCORE # and snake.die()
-        field_to_score = world_map[coord]
-        if field_to_score == self.FOOD:
-            return self.FOOD_SCORE
-        if field_to_score == self.EMPTY:
-            return self.EMPTY_SCORE
-        return self.OBSTACLE_SCORE # and snake.die()
-        # extend: penalize not empty field but change of direction, to favor bigger movements / laziness?  --> input current state AND previous action into network
+    def is_snake_out_of_bounds(self):
+        x,y = self.snake.pos[0]
+        height, width = self.dim
+        if x < 0 or y < 0 or x >= width or y >= height:
+            print("Snake moved out of World")
+            return True
+        return False
 
-        
+    def is_snake_at_food(self):
+        if self.snake.pos in self.foods:
+            print("Snake reached food")
+            return True
+        return False
+
+    def is_snake_in_obstacle(self):
+        if self.snake.pos in self.obstacles:
+            print("Snake ran into obstacle")
+            return True
+        return False
+
+    # adjust for > 1 snake by passing snake as arg
+    def check_snake(self):
+        if self.is_snake_out_of_bounds():
+            self.snake.reward(self.OBSTACLE_SCORE)
+            self.snake.die()
+        elif self.is_snake_at_food():
+            self.snake.reward(self.FOOD_SCORE)
+            # self.snake.grow()
+        elif self.is_snake_in_obstacle():
+            self.snake.reward(self.OBSTACLE_SCORE)
+            self.snake.die()
+        else:
+            self.snake.reward(self.EMPTY_SCORE)
+
+
 def simu_for_training(dim, n):
     height, width = dim
     simu_states = []
@@ -84,10 +105,14 @@ def simu_for_training(dim, n):
         world_map = world.get_map()
         state = world.get_state()
         rewards = []
+        pprint.pprint(world_map)
         for action in world.snake.ACTION_SPACE:
+            print(action)
             world.snake.set_direction(action)
             world.snake.move()
-            rewards.append(world.score(world_map, world.snake.pos[0])) # fix snake mv for list of pos
+            world.check_snake()
+            rewards.append(world.snake.last_reward)
+            # reset snake for next simulated action
             world.snake.pos = [(i,j)]
         simu_states.append(state)
         simu_rewards.append(rewards)
@@ -99,7 +124,7 @@ def simu_for_training(dim, n):
 
 def main():
     world = World((5,5))
-    training_dir = '03'
+    training_dir = '08'
     net = network.Network(training_dir)
 
     simu_states, simu_rewards = simu_for_training(world.dim, 10000)
@@ -117,13 +142,10 @@ def main():
 
         world.snake.set_direction(next_action)
         world.snake.move()
-        if world.score(world_map, world.snake.pos[0]) == world.OBSTACLE_SCORE: # check map at current snake pos before it moved there (== did it die?)  --> implement better is_dead() fct
-            world.snake.die()
+        world.check_snake()
         time.sleep(2)
-    
 
 
 main()
-    
 
 
