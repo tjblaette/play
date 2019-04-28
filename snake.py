@@ -29,9 +29,9 @@ class Snake:
         y,x = self.pos[0]
         if self.direction == 0:  #'right'
             x += 1
-        elif self.direction == 1:  #'left'
+        elif self.direction == 2:  #'left'
             x -= 1
-        elif self.direction == 2:  #'down'
+        elif self.direction == 1:  #'down'
             y += 1
         elif self.direction == 3:  #'up'
             y -= 1
