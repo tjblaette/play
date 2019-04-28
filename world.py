@@ -4,9 +4,11 @@ import snake
 import network
 import visworld
 import random
+import time
+import pprint
 
 class World():
-    def __init__(self, dim, this_snake=None, foods=None, obstacles=None, render=False):
+    def __init__(self, dim, this_snake=None, foods=None, obstacles=None, should_render=False):
         self.dim = dim
         width, height = self.dim
 
@@ -28,13 +30,14 @@ class World():
         self.OBSTACLE_SCORE = -self.FOOD_SCORE
         self.EMPTY_SCORE = -1 # penalize moving onto empty fields
 
-        if render:
+        self.should_render = should_render
+        if self.should_render:
             self.vis = visworld.Vis(self.dim, self.BLOCKSIZE)
 
 
     def get_map(self):
         world_map = np.full(self.dim, self.EMPTY)
-        for coord, segment in zip(self.snake.coords, self.snake.segments):
+        for coord, segment in zip(self.snake.pos, self.snake.segments):
             world_map[coord] = segment
         for food in self.foods:
             world_map[food] = self.FOOD
@@ -42,7 +45,7 @@ class World():
             world_map[obst] = self.OBSTACLE
         return world_map
 
-    def draw(self):
+    def render(self):
         pass
 
     def get_state(self):
@@ -81,11 +84,11 @@ def simu_for_training(dim, n):
         world_map = world.get_map()
         state = world.get_state()
         rewards = []
-        for action in world.snake.action_space:
+        for action in world.snake.ACTION_SPACE:
             world.snake.set_direction(action)
             world.snake.move()
-            rewards.append(world.score(world_map, world.snake.coords[0])) # fix snake mv for list of coords
-            world.snake.coords = [(i,j)]
+            rewards.append(world.score(world_map, world.snake.pos[0])) # fix snake mv for list of pos
+            world.snake.pos = [(i,j)]
         simu_states.append(state)
         simu_rewards.append(rewards)
     simu_states = np.array(simu_states)
@@ -99,13 +102,25 @@ def main():
     training_dir = '03'
     net = network.Network(training_dir)
 
-    simu_states, simu_rewards = simu_for_training(world.dim, 3)
+    simu_states, simu_rewards = simu_for_training(world.dim, 10000)
     print("TRAIN")
     net.train(simu_states, simu_rewards)
     print("PREDICT multi")
     net.get_action(simu_states)
     print("PREDICT single")
     print(world.get_next_action(net))
+
+    while world.snake.alive:
+        world_map = world.get_map()
+        next_action = world.get_next_action(net)
+        pprint.pprint(world_map)
+
+        world.snake.set_direction(next_action)
+        world.snake.move()
+        if world.score(world_map, world.snake.pos[0]) == world.OBSTACLE_SCORE: # check map at current snake pos before it moved there (== did it die?)  --> implement better is_dead() fct
+            world.snake.die()
+        time.sleep(2)
+    
 
 
 main()

@@ -27,6 +27,18 @@ class Vis():
         state = state[::self.BLOCKSIZE, ::self.BLOCKSIZE]
         return state
 
+    def draw(self, world_map):
+        # draw world map onto self.surface
+        pass
+
+    def update(self):
+        # display surface
+        pass
+
+    def keep_rendering(self):
+        # listen to pygame events
+        pass
+
     def end(self):
         pygame.quit()
         #sys.exit()

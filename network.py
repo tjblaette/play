@@ -41,27 +41,19 @@ class Network():
 
     def get_action(self, state):
         # using state, predict snake action rewards and pick the expected optimal action
-        print("current state: {}".format(state))
-        print(state.shape)
+        #print("current state: {}".format(state))
         expected_reward = self.predict(state)
-        print("expected rewards: {}".format(expected_reward))
+        #print("expected rewards: {}".format(expected_reward))
         return np.argmax(expected_reward) 
 
     def predict(self, state): # if only used for get_action(), directly code above and rm this one
         return self.model.predict(state)
 
 
-    def train(self, states, rewards, epochs=10):
-        print(states.shape)
-        print(rewards.shape)
+    def train(self, states, rewards, epochs=1):
         self.model.fit(
-                states,
+                states, # change this to get training batch per epoch -> instead of passing states and rewards, pass fct to generate examples?
                 rewards,
                 epochs=epochs,
                 callbacks=[self.cp_callback, self.tb_callback],
                 )
-
-    def eval(self, states, rewards):
-        test_loss, test_acc = self.model.evaluate(states, rewards)
-        print('Test accuracy:', test_acc)
-
