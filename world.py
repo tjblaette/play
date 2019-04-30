@@ -15,9 +15,9 @@ class World():
         self.EMPTY = ' '
         self.FOOD = 'x'
         self.OBSTACLE = '='
-        self.FOOD_SCORE = sum(self.dim)
-        self.OBSTACLE_SCORE = -self.FOOD_SCORE
-        self.EMPTY_SCORE = -1 # penalize moving onto empty fields
+        self.FOOD_SCORE = sum(self.dim) #it must be worth getting food across the entire world
+        self.OBSTACLE_SCORE = -self.FOOD_SCORE #death must be the least optimal solution
+        self.empty_score = self.score_empty_field # penalize moving onto empty fields - favor closing in on food
 
         self.snake = this_snake
         self.foods = foods
@@ -115,7 +115,18 @@ class World():
             self.snake.reward(self.OBSTACLE_SCORE)
             self.snake.die()
         else:
-            self.snake.reward(self.EMPTY_SCORE)
+            self.snake.reward(self.score_empty_field())
+
+    def score_empty_field(self):
+        return - self.distance_to_closest_food() / self.FOOD_SCORE
+
+    def distance_to_closest_food(self):
+        min_dist = None
+        for food in self.foods:
+            dist = sum([abs(food_coord - snake_coord) for food_coord, snake_coord in zip(food, self.snake.pos[0])])
+            if min_dist is None or dist < min_dist:
+                min_dist = dist
+        return min_dist
 
 
 def simu_for_training(dim, n):
@@ -148,12 +159,12 @@ def simu_for_training(dim, n):
 
 def main():
     world = World((5,5))
-    training_dir = '14'
+    training_dir = '15'
     net = network.Network(training_dir)
 
     print("TRAIN")
-#    simu_states, simu_rewards = simu_for_training(world.dim, 10000)
-#    net.train(simu_states, simu_rewards)
+    simu_states, simu_rewards = simu_for_training(world.dim, 10000)
+    net.train(simu_states, simu_rewards)
 
     print("PREDICT multi")
     simu_states, simu_rewards = simu_for_training(world.dim, 5)
