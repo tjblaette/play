@@ -118,7 +118,7 @@ class World():
             self.snake.reward(self.score_empty_field())
 
     def score_empty_field(self):
-        return - self.distance_to_closest_food() / self.FOOD_SCORE
+        return self.FOOD_SCORE - self.distance_to_closest_food()
 
     def distance_to_closest_food(self):
         min_dist = None
@@ -129,7 +129,37 @@ class World():
         return min_dist
 
 
-def simu_for_training(dim, n):
+def simu_actions_for_training(dim, n):
+    height, width = dim
+    simu_states = []
+    opt_actions = []
+    for _ in range(n):
+        i,j = random.randint(0, height -1), random.randint(0, width -1)
+        world = World(dim, snake.Snake((i,j)))
+        world_map = world.get_map()
+        state = world.get_state()
+        rewards = []
+        pprint.pprint(world_map)
+        for action in world.snake.ACTION_SPACE:
+            print("action to simulate: {}".format(action))
+            world.snake.set_direction(action)
+            world.snake.move()
+            world.update_snake()
+            rewards.append(world.snake.last_reward)
+            # reset snake for next simulated action
+            world.snake.pos = [(i,j)]
+        print("rewards obtained: {}".format(rewards))
+        opt_action = np.zeros(len(rewards))
+        opt_action[np.argmax(rewards)] = 1
+        print("optimal action: {}".format(opt_action))
+        simu_states.append(state)
+        opt_actions.append(opt_action)
+    simu_states = np.array(simu_states)
+    opt_actions = np.array(opt_actions)
+
+    return simu_states, opt_actions
+
+def simu_rewards_for_training(dim, n):
     height, width = dim
     simu_states = []
     simu_rewards = []
@@ -159,12 +189,16 @@ def simu_for_training(dim, n):
 
 def main():
     world = World((5,5))
-    training_dir = '15'
+    #training_dir = '15' # reward bases on closest distance to food scaled by FOOD_SCORE
+    training_dir = '16_pos-food-reward-based-on-distance-closed-already' # reward bases on FOOD_SCORE - closest distance to food 
+#    training_dir = '17' # predict optimal action directly instead of reward
     net = network.Network(training_dir)
+    #simu_for_training = simu_rewards_for_training
+    #simu_for_training = simu_actions_for_training
 
-    print("TRAIN")
-    simu_states, simu_rewards = simu_for_training(world.dim, 10000)
-    net.train(simu_states, simu_rewards)
+    #print("TRAIN")
+    #simu_states, simu_rewards = simu_for_training(world.dim, 10000)
+    #net.train(simu_states, simu_rewards)
 
     print("PREDICT multi")
     simu_states, simu_rewards = simu_for_training(world.dim, 5)
