@@ -95,6 +95,8 @@ class World():
     def is_snake_in_obstacle(self):
         if self.snake.pos[0] in self.obstacles:
             print("Snake ran into obstacle")
+        if len(self.snake.pos) > 1 and self.snake.pos[0] in self.snake.pos[1:]:
+            print("Snake ran into itself")
             return True
         return False
 
@@ -110,7 +112,7 @@ class World():
         elif self.is_snake_at_food():
             self.snake.reward(self.FOOD_SCORE)
             self.update_foods()
-            # self.snake.grow_on_next_move = True
+            self.snake.grow_on_next_move = True
         elif self.is_snake_in_obstacle():
             self.snake.reward(self.OBSTACLE_SCORE)
             self.snake.die()
@@ -191,14 +193,15 @@ def main():
     world = World((5,5))
     #training_dir = '15' # reward bases on closest distance to food scaled by FOOD_SCORE
     training_dir = '16_pos-food-reward-based-on-distance-closed-already' # reward bases on FOOD_SCORE - closest distance to food 
+    training_dir = '17_grow'
 #    training_dir = '17' # predict optimal action directly instead of reward
     net = network.Network(training_dir)
-    #simu_for_training = simu_rewards_for_training
-    #simu_for_training = simu_actions_for_training
+    simu_for_training = simu_rewards_for_training
+    simu_for_training = simu_actions_for_training
 
-    #print("TRAIN")
-    #simu_states, simu_rewards = simu_for_training(world.dim, 10000)
-    #net.train(simu_states, simu_rewards)
+    print("TRAIN")
+    simu_states, simu_rewards = simu_for_training(world.dim, 10000)
+    net.train(simu_states, simu_rewards)
 
     print("PREDICT multi")
     simu_states, simu_rewards = simu_for_training(world.dim, 5)
@@ -207,7 +210,6 @@ def main():
     print("PREDICT single")
     simu_states, simu_rewards = simu_for_training(world.dim, 1)
     net.get_action(simu_states)
-
 
     while world.snake.alive:
         world_map = world.get_map()
@@ -220,7 +222,4 @@ def main():
         world.update_snake()
         time.sleep(2)
 
-
 main()
-
-
