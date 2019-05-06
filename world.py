@@ -17,7 +17,7 @@ class World():
         self.OBSTACLE = '='
         self.FOOD_SCORE = sum(self.dim) #it must be worth getting food across the entire world
         self.OBSTACLE_SCORE = -self.FOOD_SCORE #death must be the least optimal solution
-        self.empty_score = self.score_empty_field # penalize moving onto empty fields - favor closing in on food
+        self.EMPTY_SCORE = 1 # reward staying alive
 
         self.snake = this_snake
         self.foods = foods
@@ -62,20 +62,40 @@ class World():
         return random.choice(self.get_empty_fields())
 
 
-    def render(self):
-        pass
-
     def get_state(self):
         world_map = self.get_map()
         char_to_int = np.vectorize(lambda x: ord(x))
-        return char_to_int(world_map)
+        ascii_map = char_to_int(world_map)
+        state = ascii_map.flatten()
+        return state
 
-    def get_future_state(self, action):
-        pass
-
-    def get_next_action(self, network):
+    def get_optimal_action(self, network):
         current_state = self.get_state()
-        return network.get_action(np.array(current_state, ndmin=3))
+        max_expected_reward = None
+        max_expected_reward_action = None
+        for action in self.snake.ACTION_SPACE:
+            full_state = np.concatenate((current_state, [action]))
+            full_state = np.array(full_state, ndmin=2)
+            expected_reward = network.get_action(full_state)
+            if max_expected_reward is None or expected_reward > max_expected_reward:
+                max_expected_reward = expected_reward
+                max_expected_reward_action = action
+        #print("max expected reward {} for action {}".format(max_expected_reward, max_expected_reward_action))
+        assert max_expected_reward is not None
+        return max_expected_reward_action
+
+    def get_random_action(self):
+        return random.randrange(0,len(self.snake.ACTION_SPACE))
+
+    def get_next_action(self, network, exploration_prob=0.1):
+        # random.random -> float[0,1)
+        if random.random() >= exploration_prob:
+            #print("exploiting!")
+            assert exploration_prob < 1
+            return self.get_optimal_action(network)
+        #print("exploring!")
+        assert exploration_prob > 0
+        return self.get_random_action()
 
     def is_snake_out_of_bounds(self):
         x,y = self.snake.pos[0]
@@ -112,84 +132,104 @@ class World():
         elif self.is_snake_at_food():
             self.snake.reward(self.FOOD_SCORE)
             self.update_foods()
-            self.snake.grow_on_next_move = True
+            #self.snake.grow_on_next_move = True
         elif self.is_snake_in_obstacle():
             self.snake.reward(self.OBSTACLE_SCORE)
             self.snake.die()
         else:
-            self.snake.reward(self.score_empty_field())
+            self.snake.reward(self.EMPTY_SCORE)
 
-    def score_empty_field(self):
-        return self.FOOD_SCORE - self.distance_to_closest_food()
+def process_rewards_for_training(rewards):
+    # input is reward for each consecutive state of one episode
+    decay = 0.1
+    expected_future_rewards = []
+    for i,reward in enumerate(rewards):
+        total_future_reward = 0
+        for j,future_reward in enumerate(rewards[i:]):
+            total_future_reward += future_reward * decay**j
+        expected_future_rewards += [total_future_reward]
+    #print("rewards per state per episode: {}".format(rewards))
+    #print("cum_expected_future_reward per state: {}".format(expected_future_rewards))
+    return expected_future_rewards
 
-    def distance_to_closest_food(self):
-        min_dist = None
-        for food in self.foods:
-            dist = sum([abs(food_coord - snake_coord) for food_coord, snake_coord in zip(food, self.snake.pos[0])])
-            if min_dist is None or dist < min_dist:
-                min_dist = dist
-        return min_dist
 
+def play_to_train(dim, network_dir, exploration_prob=1, should_render=False):
+    world = World(dim)
+    net = network.Network(network_dir)
 
-def simu_actions_for_training(dim, n):
-    height, width = dim
-    simu_states = []
-    opt_actions = []
-    for _ in range(n):
-        i,j = random.randint(0, height -1), random.randint(0, width -1)
-        world = World(dim, snake.Snake((i,j)))
+    states = []
+    actions = []
+    rewards = []
+    
+    while world.snake.alive and len(actions) < 20:
         world_map = world.get_map()
+        if should_render:
+            pprint.pprint(world_map)
+
         state = world.get_state()
-        rewards = []
-        pprint.pprint(world_map)
-        for action in world.snake.ACTION_SPACE:
-            print("action to simulate: {}".format(action))
-            world.snake.set_direction(action)
-            world.snake.move()
-            world.update_snake()
-            rewards.append(world.snake.last_reward)
-            # reset snake for next simulated action
-            world.snake.pos = [(i,j)]
-        print("rewards obtained: {}".format(rewards))
-        opt_action = np.zeros(len(rewards))
-        opt_action[np.argmax(rewards)] = 1
-        print("optimal action: {}".format(opt_action))
-        simu_states.append(state)
-        opt_actions.append(opt_action)
-    simu_states = np.array(simu_states)
-    opt_actions = np.array(opt_actions)
+        action = world.get_next_action(net, exploration_prob)
+        world.snake.set_direction(action)
+        world.snake.move()
+        world.update_snake()
+        reward = world.snake.last_reward
 
-    return simu_states, opt_actions
+        states.append(state.tolist())
+        actions.append(action)
+        rewards.append(reward)
+        if should_render:
+            time.sleep(2)
 
-def simu_rewards_for_training(dim, n):
-    height, width = dim
-    simu_states = []
-    simu_rewards = []
-    for _ in range(n):
-        i,j = random.randint(0, height -1), random.randint(0, width -1)
-        world = World(dim, snake.Snake((i,j)))
-        world_map = world.get_map()
-        state = world.get_state()
-        rewards = []
-        pprint.pprint(world_map)
-        for action in world.snake.ACTION_SPACE:
-            print("action to simulate: {}".format(action))
-            world.snake.set_direction(action)
-            world.snake.move()
-            world.update_snake()
-            rewards.append(world.snake.last_reward)
-            # reset snake for next simulated action
-            world.snake.pos = [(i,j)]
-        print("rewards obtained: {}".format(rewards))
-        simu_states.append(state)
-        simu_rewards.append(rewards)
-    simu_states = np.array(simu_states)
-    simu_rewards = np.array(simu_rewards)
-
-    return simu_states, simu_rewards
-
+    rewards = process_rewards_for_training(rewards)
+            
+    print("Collected {} states for training".format(len(actions)))
+    #print(states)
+    #print(actions)
+    #print(rewards)
+    return states, actions, rewards
 
 def main():
+    dim = (5,5)
+    network_dir = '21_rl_5-5-action_one-food_no-grow_decay01_02'
+    ep_states = []
+    ep_actions = []
+    ep_rewards = []
+    ep_action_states = []
+
+    for i in range(1000):
+        print("---------")
+        print(i)
+        states, actions, rewards = play_to_train(dim, network_dir, exploration_prob=1)
+        action_states = [state + [action] for state, action in zip(states, actions)]
+        ep_states += states
+        ep_actions += actions
+        ep_rewards += rewards
+        ep_action_states += action_states
+
+    indices = np.arange(len(ep_action_states))
+    random.shuffle(indices)
+    shuffled_action_states = [ep_action_states[i] for i in indices]
+    shuffled_rewards = [ep_rewards[i] for i in indices]
+
+    print("TRAIN")
+    net = network.Network(network_dir)
+    net.train(np.array(shuffled_action_states), shuffled_rewards)
+
+    world = World(dim)
+    while world.snake.alive:
+        world_map = world.get_map()
+        print("active world:")
+        pprint.pprint(world_map)
+        next_action = world.get_next_action(net, exploration_prob=0)
+
+        world.snake.set_direction(next_action)
+        world.snake.move()
+        world.update_snake()
+        time.sleep(2)
+
+
+    
+
+def main_old():
     world = World((5,5))
     #training_dir = '15' # reward bases on closest distance to food scaled by FOOD_SCORE
     training_dir = '16_pos-food-reward-based-on-distance-closed-already' # reward bases on FOOD_SCORE - closest distance to food 

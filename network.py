@@ -9,10 +9,10 @@ class Network():
         # input = map / state of the world
         # output = expected reward for each possible action
         self.model = keras.Sequential([
-            keras.layers.Flatten(input_shape=(5,5)),
+            keras.layers.Flatten(input_shape=(26,)),
             keras.layers.Dense(50, activation=tf.nn.relu),
             keras.layers.Dense(25, activation=tf.nn.relu),
-            keras.layers.Dense(4, activation=None) #tf.nn.softmax
+            keras.layers.Dense(1, activation=None) #tf.nn.softmax
         ])
 
         self.model.compile(optimizer='adam',
@@ -23,11 +23,10 @@ class Network():
                 )
 
         # check point saving
+        #checkpoint_path = chkpt_dir + os.path.sep + "cp-{epoch:04d}.ckpt"
         checkpoint_path = chkpt_dir + os.path.sep + "cp.ckpt"
         checkpoint_dir = os.path.dirname(checkpoint_path)
-        self.cp_callback = tf.keras.callbacks.ModelCheckpoint(checkpoint_path,
-                                                         save_weights_only=False,
-                                                         verbose=1)
+        self.cp_callback = tf.keras.callbacks.ModelCheckpoint(checkpoint_path, period=1)
         self.tb_callback = tf.keras.callbacks.TensorBoard(log_dir=checkpoint_dir)
 
 
@@ -36,7 +35,6 @@ class Network():
             print("Checkpoint loaded!")
             self.model.load_weights(checkpoint_path)
         else:
-            print("No checkpoint loaded!")
             pass
 
     def get_action(self, state):
@@ -44,7 +42,7 @@ class Network():
         #print("current state: {}".format(state))
         expected_reward = self.predict(state)
         print("expected rewards: {}".format(expected_reward))
-        return np.argmax(expected_reward) 
+        return expected_reward
 
     def predict(self, state): # if only used for get_action(), directly code above and rm this one
         return self.model.predict(state)

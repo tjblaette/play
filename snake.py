@@ -37,7 +37,7 @@ class Snake:
         pass
 
     def move(self):
-        print("old pos: {}".format(self.pos))
+        #print("old pos: {}".format(self.pos))
         # get new head
         y,x = self.pos[0]
         if self.direction == 0:  #'right'
@@ -54,12 +54,12 @@ class Snake:
         if not self.grow_on_next_move:
             del self.pos[-1]
         self.grow_on_next_move = False
-        print("new pos: {}".format(self.pos))
+        #print("new pos: {}".format(self.pos))
 
         self.last_action = self.direction # save direction that got snake to where it is now
 
         
     def die(self):
-        print("You died!")
+        print("You died at length {}!".format(len(self.pos)))
         self.alive = False
 
