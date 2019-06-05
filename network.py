@@ -5,53 +5,55 @@ import os
 import glob
 
 class Network():
-    def __init__(self, chkpt_dir="training"):
+    def __init__(self, state_space_dim, action_space_dim, chkpt_dir="training"):
         # input = map / state of the world
         # output = expected reward for each possible action
-        self.model = keras.Sequential([
-            keras.layers.Flatten(input_shape=(26,)),
-            keras.layers.Dense(50, activation=tf.nn.relu),
-            keras.layers.Dense(25, activation=tf.nn.relu),
-            keras.layers.Dense(1, activation=None) #tf.nn.softmax
-        ])
+        input_states = keras.layers.Input(shape=(state_space_dim, ))
+        input_actions = keras.layers.Input(shape=(action_space_dim, ))
+        
+        hidden = keras.layers.Dense(50, activation=tf.nn.relu)(input_states)
+        hidden = keras.layers.Dense(50, activation=tf.nn.relu)(hidden)
 
+        output = keras.layers.Dense(action_space_dim, activation="linear")(hidden) 
+        masked_output = keras.layers.multiply([output, input_actions])
+
+        self.model = keras.models.Model(inputs=[input_states, input_actions], outputs=masked_output)
         self.model.compile(optimizer='adam',
                 loss='mse',
                 metrics=['mae'],
-                #loss='sparse_categorical_crossentropy',
-                #metrics=['accuracy']
                 )
 
         # check point saving
-        #checkpoint_path = chkpt_dir + os.path.sep + "cp-{epoch:04d}.ckpt"
-        checkpoint_path = chkpt_dir + os.path.sep + "cp.ckpt"
-        checkpoint_dir = os.path.dirname(checkpoint_path)
-        self.cp_callback = tf.keras.callbacks.ModelCheckpoint(checkpoint_path, period=1)
-        self.tb_callback = tf.keras.callbacks.TensorBoard(log_dir=checkpoint_dir)
-
+        self.checkpoint_path = chkpt_dir + os.path.sep + "model.h5"
+        self.checkpoint_dir = os.path.dirname(self.checkpoint_path)
 
         # if a checkpoint file already exists, load it
-        if glob.glob(checkpoint_path + "*"):
-            print("Checkpoint loaded!")
-            self.model.load_weights(checkpoint_path)
+        if glob.glob(self.checkpoint_path + "*"):
+            print("Checkpoint loaded: {}".format(self.checkpoint_path))
+            self.model = tf.keras.models.load_model(self.checkpoint_path)
         else:
+            print("NO CHECKPOINT FOUND")
             pass
 
-    def get_action(self, state):
-        # using state, predict snake action rewards and pick the expected optimal action
-        #print("current state: {}".format(state))
-        expected_reward = self.predict(state)
-        print("expected rewards: {}".format(expected_reward))
-        return expected_reward
-
-    def predict(self, state): # if only used for get_action(), directly code above and rm this one
-        return self.model.predict(state)
+        if not os.path.exists(self.checkpoint_dir):
+            os.makedirs(self.checkpoint_dir)
 
 
-    def train(self, states, rewards, epochs=1000):
+    def predict(self, state, action):
+        # for a given state and action, predict subsequent reward
+        expected_rewards = self.model.predict([state,action])
+        print("expected rewards: {}".format(expected_rewards))
+        return expected_rewards
+
+    def train(self, transitions, true_q, epochs=1):
+        states = [transition[0] for transition in transitions]
+        actions = [transition[1] for transition in transitions]
+        action_vecs = [[int(i == action) for i in range(4)] for action in actions]
+
         self.model.fit(
-                states, # change this to get training batch per epoch -> instead of passing states and rewards, pass fct to generate examples?
-                rewards,
+                [states, action_vecs],
+                [true_q],
                 epochs=epochs,
-                callbacks=[self.cp_callback, self.tb_callback],
                 )
+        print("Saving model to {}".format(self.checkpoint_path))
+        self.model.save(self.checkpoint_path)

@@ -6,11 +6,11 @@ class Snake:
         self.alive = True
         self.ACTION_SPACE_LIT = ['right', 'down', 'left', 'up']
         self.ACTION_SPACE = np.arange(len(self.ACTION_SPACE_LIT))
+        self.ACTION_DIM = len(self.ACTION_SPACE)
 
         self.direction = direction
         if not self.direction:
             self.direction = self.ACTION_SPACE[0] # set to None, pause game on init until first direction is given
-        self.last_action = None
         self.last_reward = None
         self.total_reward = 0
 
@@ -37,7 +37,6 @@ class Snake:
         pass
 
     def move(self):
-        #print("old pos: {}".format(self.pos))
         # get new head
         y,x = self.pos[0]
         if self.direction == 0:  #'right'
@@ -54,11 +53,8 @@ class Snake:
         if not self.grow_on_next_move:
             del self.pos[-1]
         self.grow_on_next_move = False
-        #print("new pos: {}".format(self.pos))
 
-        self.last_action = self.direction # save direction that got snake to where it is now
 
-        
     def die(self):
         print("You died at length {}!".format(len(self.pos)))
         self.alive = False
