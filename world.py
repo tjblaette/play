@@ -11,16 +11,39 @@ import matplotlib.pyplot as plt
 
 class World():
     def __init__(self, dim, this_snake=None, foods=None, obstacles=None, should_render=False):
+        """
+        Initialize the World and a Snake to wander it.
+
+        dim (int, int): Dimension tuple defining the size of the world.
+        this_snake (Snake): Snake to wander the World.
+        foods: List of coordinate tuples, corresponding to food items
+            positioned in the world, which the snake can eat.
+        obstacles: List of coordinate tuples, corresponding to
+            obstacles in the world, which kill the snake if it
+            moves into these. 
+            ---  NOT IMPLEMENTED YET!  ----
+        should_render (bool): Whether the world should be rendered
+            using external module (via pygame).
+            ---  NOT IMPLEMENTED YET!  ----
+        """
+        # define the world
         self.dim = dim
         width, height = self.dim
 
+        # define string representation of the world
         self.EMPTY = ' '
         self.FOOD = 'x'
         self.OBSTACLE = '='
-        self.FOOD_SCORE = sum(self.dim) #it must be worth getting food across the entire world
-        self.OBSTACLE_SCORE = -self.FOOD_SCORE #death must be the least optimal solution
-        self.EMPTY_SCORE = 1 # reward staying alive
 
+        # define rewards to be given for the snake's actions
+        # -> it must be worth getting food across the entire world
+        self.FOOD_SCORE = sum(self.dim)
+        # -> death must be the least optimal solution 
+        self.OBSTACLE_SCORE = -self.FOOD_SCORE
+        # -> reward staying alive
+        self.EMPTY_SCORE = 1
+
+        # fill the world with content
         self.snake = this_snake
         self.foods = foods
         self.obstacles = obstacles
@@ -28,16 +51,24 @@ class World():
         if not self.snake:
             self.snake = snake.Snake(self.one_empty_field())
         if self.foods is None:
-            #self.foods = [self.one_empty_field()]
-            self.foods = []
+            self.foods = [self.one_empty_field()]
+            #self.foods = []
         if self.obstacles is None:
             self.obstacles = []
 
+        # test whether the world should be rendered using external module
         self.should_render = should_render
         if self.should_render:
             self.vis = visworld.Vis(self.dim, self.BLOCKSIZE)
 
     def get_map(self):
+        """
+        Obtain a 2D string-array representation of the world,
+        including snake, food and obstacle fields.
+
+        Returns:
+            Two dimensional numpy array of strings.
+        """
         world_map = np.full(self.dim, self.EMPTY)
         if self.foods:
             for food in self.foods:
@@ -51,6 +82,12 @@ class World():
         return world_map
 
     def all_empty_fields(self):
+        """
+        Collect all of the world's empty fields.
+
+        Returns:
+            A list of coordinate tuples (int, int).
+        """
         empty = []
         world_map = self.get_map()
         height, width = self.dim
@@ -60,10 +97,27 @@ class World():
                     empty.append((i,j))
         return empty
 
+    # catch filled-up world?!
     def one_empty_field(self):
+        """
+        Return one random empty field of the world.
+
+        Returns:
+            A single coordinate tuple (int, int).
+        """
         return random.choice(self.all_empty_fields())
 
     def get_state(self):
+        """
+        Obtain an integer representation of the world
+        by converting symbols of the respective string
+        representation to ASCII code. Use this
+        representation as the _state_ of the world
+        for network learning.
+
+        Returns:
+            A flattened 1D numpy array of integers.
+        """
         world_map = self.get_map()
         char_to_int = np.vectorize(lambda x: ord(x))
         ascii_map = char_to_int(world_map)
@@ -72,15 +126,50 @@ class World():
         return state
 
     def get_optimal_action(self, net):
+        """
+        Using a given neural network, predict
+        the optimal action to take in the current state
+        of the world. The optimal action is the one 
+        that maximizes the expected reward that is
+        predicted by the network.
+
+        Args:
+            network (Network): Instance of Network,
+                which is used to predict the expected
+                reward & determine the optimal action.
+
+        Returns:
+            Optimal action (int).
+        """
         current_state = self.get_state()
         expected_rewards = net.predict([current_state], [np.ones(4)])
         opt_action = np.argmax(expected_rewards)
         return opt_action
 
     def get_random_action(self):
+        """
+        Select an action at random.
+
+        Returns:
+            A random action (int).
+        """
         return random.randrange(0, self.snake.ACTION_DIM)
 
     def get_next_action(self, network, exploration_prob=0.1):
+        """
+        Weigh exploration vs exploitation and decide on the next
+        action for the current world's state.
+        Exploration = Choose a random action.
+        Exploitation = Choose optimal action.
+
+        Args:
+            network (Network): Used to predict the optimal action.
+            exploration_prob (float): Probability of exploration
+                vs exploitation, should be [0,1].
+
+        Returns:
+            An action (int).
+        """
         # random.random -> float[0,1)
         if random.random() >= exploration_prob:
             #print("exploiting!")
@@ -91,6 +180,12 @@ class World():
         return self.get_random_action()
 
     def is_snake_out_of_bounds(self):
+        """
+        Test whether the snake has moved out of the world.
+
+        Returns:
+            Boolean.
+        """
         x,y = self.snake.pos[0]
         height, width = self.dim
         if x < 0 or y < 0 or x >= width or y >= height:
@@ -99,6 +194,12 @@ class World():
         return False
 
     def is_snake_at_food(self):
+        """
+        Test whether the snake has reached food.
+
+        Returns:
+            Boolean.
+        """
         for food in self.foods:
             if self.snake.pos[0] == food:
                 print("Snake reached food")
@@ -106,6 +207,12 @@ class World():
         return False
 
     def is_snake_in_obstacle(self):
+        """
+        Test whether the snake has moved into an obstacle.
+
+        Returns:
+            Boolean.
+        """
         if self.snake.pos[0] in self.obstacles:
             print("Snake ran into obstacle")
         if len(self.snake.pos) > 1 and self.snake.pos[0] in self.snake.pos[1:]:
@@ -115,10 +222,20 @@ class World():
 
     # adjust for > 1 food items
     def update_foods(self):
+        """
+        Move food to a new, empty field.
+        """
         self.foods = [self.one_empty_field()]
 
     # adjust for > 1 snake by passing snake as arg
     def update_snake(self):
+        """
+        Check consequences of the snake's previous action:
+        Kill it, if it moved out of the world.
+        Kill it, if it moved into an obstacle.
+        Let it eat food, if it reached any.
+        In any case, reward it appropriately.
+        """
         if self.is_snake_out_of_bounds():
             self.snake.reward(self.OBSTACLE_SCORE)
             self.snake.die()
@@ -132,7 +249,21 @@ class World():
         else:
             self.snake.reward(self.EMPTY_SCORE)
 
+    # properly represent food
+    # -> currently, q is only sampled for 1 random food pos
     def get_q_table(self, net):
+        """
+        For a given world and network, calculate the expected 
+        rewards / q-values of all states and actions.
+
+        Args:
+            network (Network): Estimates q-values.
+
+        Returns:
+            A 3D numpy array with one q-value estimate per 
+            possible state and action. The first two dimensions
+            define the state, the third dimension the action.
+        """
         q_table = []
         for i in range(self.dim[0]):
             for j in range(self.dim[1]):
@@ -145,6 +276,16 @@ class World():
         return q_table
 
     def plot_q_table(self, net, filename="snake_q-table.png"):
+        """
+        For a given world and network, plot the expected
+        rewards / q-values of all states and actions as 
+        heatmaps. Plot one 2D heatmap per possible action.
+        Save all heatmaps to the same file.
+
+        Args:
+            network (Network): Estimates q-values.
+            filename (str): To save the plots to.
+        """
         q_table = self.get_q_table(net)
         print(q_table)
         q_maps = []
@@ -152,7 +293,7 @@ class World():
         
         for action,ax in zip(self.snake.ACTION_SPACE, axn.flat):
             q_action = q_table[:,:,action]
-            sns.heatmap(q_action, ax=ax, vmin=-10, vmax=10, center=0, cmap="RdBu_r", linewidths=.3, cbar=True, square=True)
+            sns.heatmap(q_action, ax=ax, vmin=-10, vmax=30, center=0, cmap="RdBu_r", linewidths=.3, cbar=True, square=True)
             ax.set_title(self.snake.ACTION_SPACE_LIT[action])
             ax.set_yticks([])
             ax.set_xticks([])
@@ -160,6 +301,18 @@ class World():
 
 
 def get_transitions(states, actions, rewards):
+    """
+    collapse sequences of states, actions and rewards
+    to individual state transitions / experiences.
+
+    Args:
+        states: List of states of the world.
+        actions: List of actions taken in these states.
+        rewards: List of rewards obtained for these actions.
+
+    Returns:
+        List of (state, action, reward, next_state) tuples.
+    """
     transitions = []
     for i in range(len(states) - 1):
         transition = (states[i], actions[i], rewards[i], states[i+1])
@@ -167,6 +320,20 @@ def get_transitions(states, actions, rewards):
     return transitions
 
 def calc_true_exp_reward(net, transition, gamma_decay):
+    """
+    Calculate the true expected reward / q-value for
+    a given transition.
+
+    Args:
+        net (Network): Predicts q of next_state.
+        transition (state, action, reward, next_state).
+        gamma_decay (float): weight of future rewards.
+
+    Returns:
+        A 1D numpy array where array[action] is the
+        true q and the entries of all other possible
+        actions are 0.
+    """
     state, action, reward, next_state = transition
     true_reward = reward + gamma_decay * np.amax(net.predict([next_state], [np.ones(4)]))
     
@@ -174,15 +341,27 @@ def calc_true_exp_reward(net, transition, gamma_decay):
     reward_vec[action] = true_reward
     return reward_vec.tolist()
 
-def calc_exp_reward(net, transition):
-    state, action, reward, next_state = transition
-    action_vec = np.zeros(4)
-    action_vec[action]= 1
-    exp_rewards = net.predict([state], [action_vec])
-    return exp_rewards
 
+def play_to_train(dim, net, exploration_prob, should_render=True):
+    """
+    Play the game / simulate a world to collect sequences
+    of states, actions and rewards for training. Training
+    does _not_ take place here though.
 
-def play_to_train(dim, net, exploration_prob=1, should_render=True):
+    Args:
+        dim (int, int): Dimension of the world to simulate.
+        net (Network): Network to predict optimal actions
+            for exploitation.
+        exploration_prob (float): Probability of exploration
+            vs exploitation.
+        should_render (bool): If true, print the world's map
+            during simulation, before each simulated action.
+
+    Returns:
+        states: List of observed states of the world.
+        actions: List of actions taken in these states.
+        rewards: List of rewards obtained for these actions.
+    """
     world = World(dim)
 
     states = []
@@ -214,6 +393,8 @@ def play_to_train(dim, net, exploration_prob=1, should_render=True):
 
 
 def main():
+    #######################################
+    # SETUP WORLD AND NEURAL NETWORK
     dim = (3,3)
     world = World(dim)
     network_dir = '28_fixQ_3x3_noFood_exploreBasedOnEp'
@@ -227,14 +408,21 @@ def main():
     network_dir = '30_fixQ_3x3_noFood_exploreComplex10_30x30'
     network_dir = '30_fixQ_3x3_noFood_exploreComplex10_30x40'
     network_dir = '30_fixQ_3x3_noFood_exploreComplex20_30x40'
-    net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir) # do not hard-code 4
+    network_dir = '30_fixQ_3x3_wFood_exploreComplex10_50x200'
+    network_dir = '30_fixQ_3x3_wFood_exploreComplex10_layers50x50x50_ep50x200'
+    network_dir = '30_fixQ_3x3_wFood_exploreComplex10_layers50x50x50_ep50x200_tmp'
+    network_dir = '31_testAfterComments'
+    net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
 
-    epochs = 30
-    batch_size = 40
+    
+    #######################################
+    # Collect training data by simulation
+    epochs = 50
+    batch_size = 200
+    gamma_decay = 0.9
     for epoch in range(epochs):
         print("---------")
-        print(epoch)
-        #print("exploration_prob: {}".format(1- epoch/epochs))
+        print("Epoch {}".format(epoch))
 
         ep_states = []
         ep_actions = []
@@ -257,27 +445,29 @@ def main():
         random.shuffle(transitions)
 
         true_q = []
-        gamma_decay = 0.9
-
         for transition in transitions:
-            #exp_rewards.append(calc_exp_reward(net, transition))
             true_q.append(calc_true_exp_reward(net, transition, gamma_decay))
 
 
+        #######################################
+        # TRAIN ON THAT DATA
         print("TRAIN")
         world.plot_q_table(net, filename="q_{}.png".format(network_dir + str(epoch)))
         net.train(transitions, true_q)
         world.plot_q_table(net, filename="q_{}.png".format(network_dir + str(epoch + 1)))
 
-#    while world.snake.alive:
-#        world_map = world.get_map()
-#        print("active world:")
-#        pprint.pprint(world_map)
-#        next_action = world.get_next_action(net, exploration_prob=0)
-#
-#        world.snake.set_direction(next_action)
-#        world.snake.move()
-#        world.update_snake()
-#        time.sleep(2)
-#
+
+    #######################################
+    # TEST IN SIMULATION
+    while world.snake.alive:
+        world_map = world.get_map()
+        print("active world:")
+        pprint.pprint(world_map)
+        next_action = world.get_next_action(net, exploration_prob=0)
+
+        world.snake.set_direction(next_action)
+        world.snake.move()
+        world.update_snake()
+        time.sleep(2)
+
 main()

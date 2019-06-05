@@ -2,41 +2,73 @@ import numpy as np
 
 class Snake:
     def __init__(self, pos, direction=None):
+        """
+        Initialize Snake.
+
+        Args:
+            pos (int, int): Coordinate tuple dedicating the snake's
+                position in the world.
+            direction (int): Direction the snake should move in,
+                must be element of self.ACTION_SPACE.
+        """      
         self.pos = [pos]
         self.alive = True
+        self.grow_on_next_move = False
+
+        self.last_reward = None
+        self.total_reward = 0
+
+        # define possible actions that the snake can perform
         self.ACTION_SPACE_LIT = ['right', 'down', 'left', 'up']
         self.ACTION_SPACE = np.arange(len(self.ACTION_SPACE_LIT))
         self.ACTION_DIM = len(self.ACTION_SPACE)
 
+        # establish direction of movement
+        # --> direction = action performed
         self.direction = direction
         if not self.direction:
-            self.direction = self.ACTION_SPACE[0] # set to None, pause game on init until first direction is given
-        self.last_reward = None
-        self.total_reward = 0
+            # set to None, pause game on init until first direction is given
+            self.direction = self.ACTION_SPACE[0]
 
+        # define string representation to print to screen
         self.HEAD = ':'
         self.BODY = 'o'
         self.TAIL = 's'
-        self.segments = self.get_segments() # str representation of snake
-        self.grow_on_next_move = False
+        self.segments = self.get_segments()
+
 
     def get_segments(self):
+        """
+        Obtain a string representation of the snake.
+
+        Returns:
+            A list of string characters.
+        """
         inner_segments = self.BODY * (len(self.pos) -2)
         return self.HEAD + inner_segments + self.TAIL
 
     def set_direction(self, new_direction):
+        """
+        Set the direction that the snake will move in next.
+
+        Args:
+            new_direction (int): Sampled from self.ACTION_SPACE.
+        """
         self.direction = new_direction
 
     def reward(self, score):
+        """
+        Save the score of a previous action.
+        """
         self.last_reward = score
         self.total_reward += score
 
-    def grow(self):
-        # grow
-        self.grow_on_next_move = False
-        pass
-
     def move(self):
+        """
+        Move the snake to the next field.
+        If the previous action lead it to
+        food, let it grow and become longer.
+        """
         # get new head
         y,x = self.pos[0]
         if self.direction == 0:  #'right'
@@ -56,6 +88,10 @@ class Snake:
 
 
     def die(self):
+        """
+        Kill the snake.
+        Inform the user.
+        """
         print("You died at length {}!".format(len(self.pos)))
         self.alive = False
 
