@@ -371,7 +371,7 @@ def play_to_train(dim, net, exploration_prob, should_render=True):
     rewards = []
     
     print("Let's play")
-    while world.snake.alive and len(actions) < 5:
+    while world.snake.alive and len(actions) < sum(dim):
         world_map = world.get_map()
         if should_render:
             pprint.pprint(world_map)
