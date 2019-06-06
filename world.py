@@ -5,6 +5,7 @@ import network
 import visworld
 import random
 import time
+import os
 import pprint
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -297,7 +298,7 @@ class World():
             ax.set_title(self.snake.ACTION_SPACE_LIT[action])
             ax.set_yticks([])
             ax.set_xticks([])
-        plt.savefig(filename)
+        plt.savefig(net.checkpoint_dir + os.path.sep + filename)
 
 
 def get_transitions(states, actions, rewards):
