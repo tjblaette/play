@@ -117,13 +117,14 @@ class World():
         for network learning.
 
         Returns:
-            A flattened 1D numpy array of integers.
+            A flattened 1D tuple of integers.
         """
         world_map = self.get_map()
         char_to_int = np.vectorize(lambda x: ord(x))
         ascii_map = char_to_int(world_map)
         state = ascii_map.flatten()
         state -= 32
+        state = tuple(state)
         return state
 
     def get_optimal_action(self, net):
@@ -383,7 +384,7 @@ def play_to_train(dim, net, exploration_prob, should_render=True):
         reward = world.snake.last_reward
         print("Actual reward: {}".format(reward))
 
-        states.append(state.tolist())
+        states.append(state)
         actions.append(action)
         rewards.append(reward)
         #if should_render:
@@ -443,6 +444,9 @@ def main():
             ep_rewards += rewards
 
         transitions = get_transitions(ep_states, ep_actions, ep_rewards)
+        print("total transitions: {}".format(len(transitions)))
+        transitions = list(set(transitions))
+        print("unique transitions: {}".format(len(transitions)))
         random.shuffle(transitions)
 
         true_q = []

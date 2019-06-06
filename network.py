@@ -59,7 +59,7 @@ class Network():
         reward / q-value.
 
         Args:
-            state: A flattented 1D numpy array of integers representing the
+            state: A flattented 1D tuple of integers representing the
                 current state of the world.
             action: A 1D numpy array with one entry per possible action. 
                     Rewards are predicted for those actions whose index
