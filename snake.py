@@ -87,11 +87,15 @@ class Snake:
         self.grow_on_next_move = False
 
 
-    def die(self):
+    def die(self, verbose):
         """
         Kill the snake.
-        Inform the user.
+
+        Args:
+            verbose (bool): Whether to inform the user and
+                print the snake's length at the time of death.
         """
-        print("You died at length {}!".format(len(self.pos)))
+        if verbose:
+            print("You died at length {}!".format(len(self.pos)))
         self.alive = False
 

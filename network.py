@@ -53,7 +53,7 @@ class Network():
             os.makedirs(self.checkpoint_dir)
 
 
-    def predict(self, state, action):
+    def predict(self, state, action, verbose=False):
         """
         For a given state and action, predict the subsequent 
         reward / q-value.
@@ -66,6 +66,7 @@ class Network():
                     is 1 -> pass all 1s to predict rewards for all possible
                     actions, pass a single 1 to predict rewards of one
                     specific action.
+            verbose (bool): Whether to print expected rewards.
 
         Returns:
             Expected future reward of the requested actions: A 1D numpy array
@@ -73,7 +74,8 @@ class Network():
             
         """
         expected_rewards = self.model.predict([state,action])
-        print("expected rewards: {}".format(expected_rewards))
+        if verbose:
+            print("expected rewards: {}".format(expected_rewards))
         return expected_rewards
 
 

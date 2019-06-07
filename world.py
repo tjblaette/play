@@ -127,7 +127,7 @@ class World():
         state = tuple(state)
         return state
 
-    def get_optimal_action(self, net):
+    def get_optimal_action(self, net, verbose):
         """
         Using a given neural network, predict
         the optimal action to take in the current state
@@ -136,15 +136,17 @@ class World():
         predicted by the network.
 
         Args:
-            network (Network): Instance of Network,
+            net (Network): Instance of Network,
                 which is used to predict the expected
                 reward & determine the optimal action.
+            verbose (bool): Whether to print expected
+                future rewards predicted by the net.
 
         Returns:
             Optimal action (int).
         """
         current_state = self.get_state()
-        expected_rewards = net.predict([current_state], [np.ones(4)])
+        expected_rewards = net.predict([current_state], [np.ones(4)], verbose)
         opt_action = np.argmax(expected_rewards)
         return opt_action
 
@@ -157,7 +159,7 @@ class World():
         """
         return random.randrange(0, self.snake.ACTION_DIM)
 
-    def get_next_action(self, network, exploration_prob=0.1):
+    def get_next_action(self, network, exploration_prob, verbose):
         """
         Weigh exploration vs exploitation and decide on the next
         action for the current world's state.
@@ -168,22 +170,30 @@ class World():
             network (Network): Used to predict the optimal action.
             exploration_prob (float): Probability of exploration
                 vs exploitation, should be [0,1].
+            verbose (bool): Whether to print type of action
+                selected (exploration vs exploitation) and
+                the expected future rewards for the latter.
 
         Returns:
             An action (int).
         """
         # random.random -> float[0,1)
         if random.random() >= exploration_prob:
-            #print("exploiting!")
+            if verbose:
+                print("exploiting!")
             assert exploration_prob < 1
-            return self.get_optimal_action(network)
-        #print("exploring!")
+            return self.get_optimal_action(network, verbose)
+        if verbose:
+            print("exploring!")
         assert exploration_prob > 0
         return self.get_random_action()
 
-    def is_snake_out_of_bounds(self):
+    def is_snake_out_of_bounds(self, verbose):
         """
         Test whether the snake has moved out of the world.
+
+        Args:
+            verbose (bool): Whether to print output.
 
         Returns:
             Boolean.
@@ -191,34 +201,45 @@ class World():
         x,y = self.snake.pos[0]
         height, width = self.dim
         if x < 0 or y < 0 or x >= width or y >= height:
-            print("Snake moved out of World")
+            if verbose:
+                print("Snake moved out of World")
             return True
         return False
 
-    def is_snake_at_food(self):
+    def is_snake_at_food(self, verbose):
         """
         Test whether the snake has reached food.
+
+        Args:
+            verbose (bool): Whether to print output.
 
         Returns:
             Boolean.
         """
         for food in self.foods:
             if self.snake.pos[0] == food:
-                print("Snake reached food")
+                if verbose:
+                    print("Snake reached food")
                 return True
         return False
 
-    def is_snake_in_obstacle(self):
+    def is_snake_in_obstacle(self, verbose):
         """
         Test whether the snake has moved into an obstacle.
+
+        Args:
+            verbose (bool): Whether to print output.
 
         Returns:
             Boolean.
         """
         if self.snake.pos[0] in self.obstacles:
-            print("Snake ran into obstacle")
+            if verbose:
+                print("Snake ran into obstacle")
+            return True
         if len(self.snake.pos) > 1 and self.snake.pos[0] in self.snake.pos[1:]:
-            print("Snake ran into itself")
+            if verbose:
+                print("Snake ran into itself")
             return True
         return False
 
@@ -230,24 +251,27 @@ class World():
         self.foods = [self.one_empty_field()]
 
     # adjust for > 1 snake by passing snake as arg
-    def update_snake(self):
+    def update_snake(self, verbose):
         """
         Check consequences of the snake's previous action:
         Kill it, if it moved out of the world.
         Kill it, if it moved into an obstacle.
         Let it eat food, if it reached any.
         In any case, reward it appropriately.
+
+        Args:
+            verbose (bool): Whether to print descriptive output.
         """
-        if self.is_snake_out_of_bounds():
+        if self.is_snake_out_of_bounds(verbose):
             self.snake.reward(self.OBSTACLE_SCORE)
-            self.snake.die()
-        elif self.is_snake_at_food():
+            self.snake.die(verbose)
+        elif self.is_snake_at_food(verbose):
             self.snake.reward(self.FOOD_SCORE)
             self.update_foods()
             #self.snake.grow_on_next_move = True
-        elif self.is_snake_in_obstacle():
+        elif self.is_snake_in_obstacle(verbose):
             self.snake.reward(self.OBSTACLE_SCORE)
-            self.snake.die()
+            self.snake.die(verbose)
         else:
             self.snake.reward(self.EMPTY_SCORE)
 
@@ -300,6 +324,25 @@ class World():
             ax.set_yticks([])
             ax.set_xticks([])
         plt.savefig(net.checkpoint_dir + os.path.sep + filename)
+
+    def play_simulation(self, net):
+        """
+        Simulate an AI-controlled game of Snake. Use exploitation
+        strategy only, to always take the (predicted) optimal action.
+
+        Args:
+            net (Network): To control the world's snake.
+        """
+        while self.snake.alive:
+            world_map = self.get_map()
+            print("active world:")
+            pprint.pprint(world_map)
+            next_action = self.get_next_action(net, exploration_prob=0, verbose=True)
+
+            self.snake.set_direction(next_action)
+            self.snake.move()
+            self.update_snake(verbose=True)
+            time.sleep(2)
 
 
 def get_transitions(states, actions, rewards):
@@ -377,10 +420,10 @@ def play_to_train(dim, net, exploration_prob, should_render=True):
             pprint.pprint(world_map)
 
         state = world.get_state()
-        action = world.get_next_action(net, exploration_prob)
+        action = world.get_next_action(net, exploration_prob, verbose=True)
         world.snake.set_direction(action)
         world.snake.move()
-        world.update_snake()
+        world.update_snake(verbose=True)
         reward = world.snake.last_reward
         print("Actual reward: {}".format(reward))
 
@@ -392,6 +435,50 @@ def play_to_train(dim, net, exploration_prob, should_render=True):
 
     return states, actions, rewards
 
+def collect_training_data(dim, net, batch_size, gamma_decay, exploration_prob):
+    """
+    Simulate games of snake to collect state transitions
+    for network training.
+
+    Args:
+        dim (int, int): Dimension of the world
+            to simulate.
+        net (Network): Network to control snake
+            in simulation for exploitation strategy.
+        batch_size (int): Number of worlds to simulate
+            and collect transitions from.
+        gamma_decay (float): Discount of expected future
+            rewards to weigh immediate vs future rewards.
+        exploration_prob (float): Probability of
+            performing exploration (random action)
+            instead of exploitation (optimal action
+            predicted by net).
+
+    Returns:
+        List of transitions: [(state, action, rewards, next_state)]
+    """
+    ep_states = []
+    ep_actions = []
+    ep_rewards = []
+
+    # get batch of training examples
+    for _ in range(batch_size):
+        states, actions, rewards = play_to_train(
+                dim,
+                net,
+                exploration_prob=exploration_prob
+                )
+        ep_states += states
+        ep_actions += actions
+        ep_rewards += rewards
+
+    transitions = get_transitions(ep_states, ep_actions, ep_rewards)
+    print("total transitions: {}".format(len(transitions)))
+    transitions = list(set(transitions))
+    print("unique transitions: {}".format(len(transitions)))
+    random.shuffle(transitions)
+
+    return transitions
 
 
 def main():
@@ -415,44 +502,26 @@ def main():
     network_dir = '30_fixQ_3x3_wFood_exploreComplex10_layers50x50x50_ep50x200_tmp'
     network_dir = '31_testAfterComments'
     net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
-
     
     #######################################
     # Collect training data by simulation
     epochs = 50
     batch_size = 200
     gamma_decay = 0.9
+
     for epoch in range(epochs):
         print("---------")
         print("Epoch {}".format(epoch))
 
-        ep_states = []
-        ep_actions = []
-        ep_rewards = []
+        transitions = collect_training_data(
+                dim,
+                net,
+                batch_size = batch_size,
+                gamma_decay = gamma_decay,
+                exploration_prob=max(0.1, 1 - epoch/epochs)
+                )
 
-        # get batch of training examples
-        for _ in range(batch_size):
-            states, actions, rewards = play_to_train(
-                    dim, 
-                    net, 
-                    #exploration_prob=0.2
-                    #exploration_prob=(1- epoch/epochs)
-                    exploration_prob=(max(0.1, 1 - epoch/epochs))
-                    )
-            ep_states += states
-            ep_actions += actions
-            ep_rewards += rewards
-
-        transitions = get_transitions(ep_states, ep_actions, ep_rewards)
-        print("total transitions: {}".format(len(transitions)))
-        transitions = list(set(transitions))
-        print("unique transitions: {}".format(len(transitions)))
-        random.shuffle(transitions)
-
-        true_q = []
-        for transition in transitions:
-            true_q.append(calc_true_exp_reward(net, transition, gamma_decay))
-
+        true_q = [calc_true_exp_reward(net, transition, gamma_decay) for transition in transitions]
 
         #######################################
         # TRAIN ON THAT DATA
@@ -461,18 +530,8 @@ def main():
         net.train(transitions, true_q)
         world.plot_q_table(net, filename="q_{}.png".format(network_dir + str(epoch + 1)))
 
-
     #######################################
     # TEST IN SIMULATION
-    while world.snake.alive:
-        world_map = world.get_map()
-        print("active world:")
-        pprint.pprint(world_map)
-        next_action = world.get_next_action(net, exploration_prob=0)
-
-        world.snake.set_direction(next_action)
-        world.snake.move()
-        world.update_snake()
-        time.sleep(2)
+    world.play_simulation(net)
 
 main()
