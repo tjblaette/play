@@ -435,6 +435,44 @@ def play_to_train(dim, net, exploration_prob, should_render=True):
 
     return states, actions, rewards
 
+def sensitivity(net, dim):
+    """
+    Calculate the sensitivity achieved by a
+    given network as the proportion of
+    simulations in which the snake successfully
+    reaches the food.
+
+    Args:
+        net (Network): To assess and to steer the
+            snake in simulation.
+        dim (int, int): Dimension of the world
+            to simulate.
+
+    Returns:
+        Proportion of successfully reached foods (float).
+    """
+    total_tries = (dim[0] * dim[1]) **2
+    success = 0
+
+    for _ in range(total_tries):
+        world = World(dim)
+        moves = 0
+
+        while world.snake.alive and moves <= dim[0] + dim[1]:
+            world_map = world.get_map()
+            next_action = world.get_next_action(net, exploration_prob=0, verbose=False)
+            world.snake.set_direction(next_action)
+            world.snake.move()
+            moves += 1
+
+            if world.is_snake_at_food(verbose=False):
+                success += 1
+                break
+            world.update_snake(verbose=False)
+
+    return success / total_tries
+
+
 def collect_training_data(dim, net, batch_size, gamma_decay, exploration_prob):
     """
     Simulate games of snake to collect state transitions
@@ -532,6 +570,8 @@ def main():
 
     #######################################
     # TEST IN SIMULATION
+    print("-----")
+    print("SENSITIVITY: {}".format(sensitivity(net, world.dim)))
     world.play_simulation(net)
 
 main()
