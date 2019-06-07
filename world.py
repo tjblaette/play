@@ -435,7 +435,7 @@ def play_to_train(dim, net, exploration_prob, should_render=True):
 
     return states, actions, rewards
 
-def sensitivity(net, dim):
+def sensitivity(net, dim, exploration_prob):
     """
     Calculate the sensitivity achieved by a
     given network as the proportion of
@@ -460,7 +460,7 @@ def sensitivity(net, dim):
 
         while world.snake.alive and moves <= dim[0] + dim[1]:
             world_map = world.get_map()
-            next_action = world.get_next_action(net, exploration_prob=0, verbose=False)
+            next_action = world.get_next_action(net, exploration_prob, verbose=False)
             world.snake.set_direction(next_action)
             world.snake.move()
             moves += 1
@@ -571,7 +571,9 @@ def main():
     #######################################
     # TEST IN SIMULATION
     print("-----")
-    print("SENSITIVITY: {}".format(sensitivity(net, world.dim)))
+    print("SENSITIVITY: {}".format(sensitivity(net, world.dim, 0)))
+    print("RANDOM CONTROL: {}".format(sensitivity(net, world.dim, 1)))
+    print("-----")
     world.play_simulation(net)
 
 main()
