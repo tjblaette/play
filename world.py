@@ -295,7 +295,6 @@ class World():
             for j in range(self.dim[1]):
                 world2 = World(self.dim, this_snake=snake.Snake((i,j)))
                 state = world2.get_state()
-                print(world2.get_map())
                 q = net.predict([state], [np.ones(world2.snake.ACTION_DIM)])
                 q_table += [q]
         q_table = np.array(q_table).reshape(self.dim + (self.snake.ACTION_DIM,))
@@ -312,9 +311,8 @@ class World():
             network (Network): Estimates q-values.
             filename (str): To save the plots to.
         """
-        q_table = self.get_q_table(net)
-        print(q_table)
         q_maps = []
+        q_table = self.get_q_table(net)
         fig,axn = plt.subplots(2, 2)
         
         for action,ax in zip(self.snake.ACTION_SPACE, axn.flat):
