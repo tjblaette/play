@@ -602,31 +602,25 @@ def collect_training_data(dim, net, batch_size, gamma_decay, exploration_prob):
 
 def main():
     #######################################
-    # SETUP WORLD AND NEURAL NETWORK
-    dim = (3,3)
+    # SETUP WORLD
+    dim = (5,5)
     world = World(dim)
-    network_dir = '28_fixQ_3x3_noFood_exploreBasedOnEp'
-    network_dir = '29_fixQ_3x3_noFood_explore20'
-    network_dir = '29_fixQ_3x3_noFood_exploreBasedOnEp_20x30'
-    network_dir = '29_fixQ_3x3_noFood_explore20_20x30'
-    network_dir = '30_fixQ_3x3_noFood_exploreBasedOnEp_20x30'
-    network_dir = '30_fixQ_3x3_noFood_explore20_20x30'
-    network_dir = '30_fixQ_3x3_noFood_exploreComplex10_20x30'
-    network_dir = '30_fixQ_3x3_noFood_exploreComplex10_20x40'
-    network_dir = '30_fixQ_3x3_noFood_exploreComplex10_30x30'
-    network_dir = '30_fixQ_3x3_noFood_exploreComplex10_30x40'
-    network_dir = '30_fixQ_3x3_noFood_exploreComplex20_30x40'
-    network_dir = '30_fixQ_3x3_wFood_exploreComplex10_50x200'
-    network_dir = '30_fixQ_3x3_wFood_exploreComplex10_layers50x50x50_ep50x200'
-    network_dir = '30_fixQ_3x3_wFood_exploreComplex10_layers50x50x50_ep50x200_tmp'
-    network_dir = '31_testAfterComments'
-    net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
     
     #######################################
     # Collect training data by simulation
     epochs = 50
     batch_size = 200
     gamma_decay = 0.9
+    file_index = 34
+    suffix =  'opt-state-mapping'
+    suffix =  'opt-state-mapping-normalized'
+    suffix =  'opt-state-mapping-normalized-range-only'
+    suffix =  'opt-state-mapping-normalized-range-only2'
+    suffix =  'opt-state-mapping-normalized-range-only-sgd'
+    suffix =  'test-lineplots'
+
+    network_dir = '_'.join([str(x) for x in [file_index, dim[0], 'x', dim[1], epochs, 'x', batch_size, gamma_decay, suffix]])
+    net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
 
     for epoch in range(epochs):
         print("---------")
