@@ -493,6 +493,57 @@ def sensitivity(tested_worlds):
     successes = [success for world, success in tested_worlds]
     return sum(successes) / len(tested_worlds)
 
+def plot_failures(tested_worlds, filename="failures.png"):
+    """
+    Plot heatmaps of the per-field fraction of
+    snakes that failed to reach a given food
+    given a set of simulation results. Save
+    heatmaps to file.
+
+    Args:
+        tested_worlds: List of (World, success (bool))
+            tuples to process.
+        filename (str): File to save heatmaps to.
+    """
+    failed_worlds = [world for world, success in tested_worlds if not success]
+
+    if failed_worlds:
+        failed_snakes = np.zeros(failed_worlds[0].dim)
+        failed_foods  = np.zeros(failed_worlds[0].dim)
+
+        for world in failed_worlds:
+            failed_snakes[world.snake.pos[0]] += 1
+            failed_foods[world.foods[0]] += 1
+
+        tested_snakes = np.zeros(tested_worlds[0][0].dim)
+        tested_foods  = np.zeros(tested_worlds[0][0].dim)
+        for world, success in tested_worlds:
+            tested_snakes[world.snake.pos[0]] += 1
+            tested_foods[world.foods[0]] += 1
+
+        failed_snakes /= tested_snakes
+        failed_foods /= tested_foods
+
+        fig,axn = plt.subplots(1,2)
+        for failed, plot_title, ax in zip(
+                [failed_snakes, failed_foods],
+                ["Fraction of\nfailed snakes", "Fraction of\nfailed foods"],
+                axn.flat):
+            sns.heatmap(
+                    failed,
+                    ax=ax,
+                    vmin=0,
+                    vmax=1,
+                    center=0.5,
+                    cmap="YlOrRd",
+                    linewidths=.3,
+                    cbar=True,
+                    square=True)
+            ax.set_title(plot_title)
+            ax.set_yticks([])
+            ax.set_xticks([])
+        plt.savefig(filename)
+
 
 
 def collect_training_data(dim, net, batch_size, gamma_decay, exploration_prob):
@@ -595,10 +646,12 @@ def main():
     print("-----")
     tested_worlds = play_to_test(net, world.dim, exploration_prob=0)
     print("SENSITIVITY: {}".format(sensitivity(tested_worlds)))
+    plot_failures(tested_worlds, net.checkpoint_dir + os.path.sep + "failure-maps_network.png")
 
     # TEST RANDOM CONTROL FOR COMPARISON
     random_worlds = play_to_test(net, world.dim, exploration_prob=1)
     print("RANDOM CONTROL: {}".format(sensitivity(random_worlds)))
+    plot_failures(random_worlds, net.checkpoint_dir + os.path.sep + "failure-maps_control.png")
     print("-----")
     world.play_simulation(net)
 
