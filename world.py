@@ -331,7 +331,7 @@ class World():
         plt.savefig(net.checkpoint_dir + os.path.sep + filename)
         plt.close(fig)
 
-    def play_simulation(self, net):
+    def play_simulation(self, net, exploration_prob=0, verbose=True):
         """
         Simulate an AI-controlled game of Snake. Use exploitation
         strategy only, to always take the (predicted) optimal action.
@@ -343,11 +343,11 @@ class World():
             world_map = self.get_map()
             print("active world:")
             pprint.pprint(world_map)
-            next_action = self.get_next_action(net, exploration_prob=0, verbose=True)
+            next_action = self.get_next_action(net, exploration_prob, verbose)
 
             self.snake.set_direction(next_action)
             self.snake.move()
-            self.update_snake(verbose=True)
+            self.update_snake(verbose)
             time.sleep(2)
 
 
@@ -393,7 +393,7 @@ def calc_true_exp_reward(net, transition, gamma_decay):
     return reward_vec.tolist()
 
 
-def play_to_train(dim, net, exploration_prob, should_render=True):
+def play_to_train(dim, net, exploration_prob, verbose=False):
     """
     Play the game / simulate a world to collect sequences
     of states, actions and rewards for training. Training
@@ -405,8 +405,6 @@ def play_to_train(dim, net, exploration_prob, should_render=True):
             for exploitation.
         exploration_prob (float): Probability of exploration
             vs exploitation.
-        should_render (bool): If true, print the world's map
-            during simulation, before each simulated action.
 
     Returns:
         states: List of observed states of the world.
@@ -419,24 +417,26 @@ def play_to_train(dim, net, exploration_prob, should_render=True):
     actions = []
     rewards = []
     
-    print("Let's play")
+    if verbose:
+        print("Let's play")
     while world.snake.alive and len(actions) < sum(dim):
         world_map = world.get_map()
-        if should_render:
+        if verbose:
             pprint.pprint(world_map)
 
         state = world.get_state()
-        action = world.get_next_action(net, exploration_prob, verbose=True)
+        action = world.get_next_action(net, exploration_prob, verbose)
         world.snake.set_direction(action)
         world.snake.move()
-        world.update_snake(verbose=True)
+        world.update_snake(verbose)
         reward = world.snake.last_reward
-        print("Actual reward: {}".format(reward))
+        if verbose:
+            print("Actual reward: {}".format(reward))
 
         states.append(state)
         actions.append(action)
         rewards.append(reward)
-        #if should_render:
+        #if verbose:
         #    time.sleep(2)
 
     return states, actions, rewards
