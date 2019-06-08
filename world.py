@@ -121,10 +121,16 @@ class World():
             A flattened 1D tuple of integers.
         """
         world_map = self.get_map()
-        char_to_int = np.vectorize(lambda x: ord(x))
-        ascii_map = char_to_int(world_map)
-        state = ascii_map.flatten()
-        state -= 32
+        state = world_map.flatten()
+        mapping = {
+                self.EMPTY : 0,
+                self.snake.HEAD : 1,
+                self.snake.BODY : 2,
+                self.snake.TAIL : 2,
+                self.FOOD : -1,
+                self.OBSTACLE : -2
+                }
+        state = [mapping[x] for x in state]
         state = tuple(state)
         return state
 
