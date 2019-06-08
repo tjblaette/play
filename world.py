@@ -323,6 +323,7 @@ class World():
             ax.set_yticks([])
             ax.set_xticks([])
         plt.savefig(net.checkpoint_dir + os.path.sep + filename)
+        plt.close(fig)
 
     def play_simulation(self, net):
         """
@@ -543,6 +544,7 @@ def plot_failures(tested_worlds, filename="failures.png"):
             ax.set_yticks([])
             ax.set_xticks([])
         plt.savefig(filename)
+        plt.close(fig)
 
 
 
