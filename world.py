@@ -9,6 +9,7 @@ import os
 import pprint
 import seaborn as sns
 import matplotlib.pyplot as plt
+import copy
 
 class World():
     def __init__(self, dim, this_snake=None, foods=None, obstacles=None, should_render=False):
@@ -433,30 +434,35 @@ def play_to_train(dim, net, exploration_prob, should_render=True):
 
     return states, actions, rewards
 
-def sensitivity(net, dim, exploration_prob):
+def play_to_test(net, dim, exploration_prob):
     """
-    Calculate the sensitivity achieved by a
-    given network as the proportion of
-    simulations in which the snake successfully
-    reaches the food.
+    Simulate snake games to determine whether
+    a given network successfully steers the
+    snake to the food.
 
     Args:
         net (Network): To assess and to steer the
             snake in simulation.
         dim (int, int): Dimension of the world
             to simulate.
+        exploration_prob (float): Probability
+            of performing exploration vs
+            exploitation. Use 1 to properly
+            assess the network's performance;
+            use 0 for an entirely random control.
 
     Returns:
-        Proportion of successfully reached foods (float).
+        List of (World, success (bool)) tuples.
     """
-    total_tries = (dim[0] * dim[1]) **2
-    success = 0
+    tested_worlds = []
 
-    for _ in range(total_tries):
+    for _ in range((dim[0] * dim[1]) **2 *3):
         world = World(dim)
+        world_at_ini = copy.deepcopy(world)
         moves = 0
+        success = 0
 
-        while world.snake.alive and moves <= dim[0] + dim[1]:
+        while world.snake.alive and moves < dim[0] + dim[1]:
             world_map = world.get_map()
             next_action = world.get_next_action(net, exploration_prob, verbose=False)
             world.snake.set_direction(next_action)
@@ -464,11 +470,29 @@ def sensitivity(net, dim, exploration_prob):
             moves += 1
 
             if world.is_snake_at_food(verbose=False):
-                success += 1
+                success = 1
                 break
             world.update_snake(verbose=False)
 
-    return success / total_tries
+        tested_worlds.append((world_at_ini, success))
+
+    return tested_worlds
+
+def sensitivity(tested_worlds):
+    """
+    Calculate the total fraction of successful
+    snake games to assess a model's performance.
+
+    Args:
+        tested_worlds: List of (World, success (bool))
+            tuples to process.
+
+    Returns:
+        Fraction of successful simulations (float of [0,1]).
+    """
+    successes = [success for world, success in tested_worlds]
+    return sum(successes) / len(tested_worlds)
+
 
 
 def collect_training_data(dim, net, batch_size, gamma_decay, exploration_prob):
@@ -569,8 +593,12 @@ def main():
     #######################################
     # TEST IN SIMULATION
     print("-----")
-    print("SENSITIVITY: {}".format(sensitivity(net, world.dim, 0)))
-    print("RANDOM CONTROL: {}".format(sensitivity(net, world.dim, 1)))
+    tested_worlds = play_to_test(net, world.dim, exploration_prob=0)
+    print("SENSITIVITY: {}".format(sensitivity(tested_worlds)))
+
+    # TEST RANDOM CONTROL FOR COMPARISON
+    random_worlds = play_to_test(net, world.dim, exploration_prob=1)
+    print("RANDOM CONTROL: {}".format(sensitivity(random_worlds)))
     print("-----")
     world.play_simulation(net)
 
