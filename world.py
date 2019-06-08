@@ -599,6 +599,13 @@ def collect_training_data(dim, net, batch_size, gamma_decay, exploration_prob):
 
     return transitions
 
+def lineplot(x, y, title, filename):
+    fig,axn = plt.subplots(1,1)
+    line_plot = sns.lineplot(x=x, y=y)
+    line_plot.set_title(title)
+    fig = line_plot.get_figure()
+    fig.savefig(filename)
+
 
 def main():
     #######################################
@@ -621,20 +628,32 @@ def main():
 
     network_dir = '_'.join([str(x) for x in [file_index, dim[0], 'x', dim[1], epochs, 'x', batch_size, gamma_decay, suffix]])
     net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
+    sensitivities = []
+    exploration_probs = []
 
     for epoch in range(epochs):
         print("---------")
         print("Epoch {}".format(epoch))
 
+        exploration_prob = max(0.1, 1 - epoch/epochs)
         transitions = collect_training_data(
                 dim,
                 net,
                 batch_size = batch_size,
                 gamma_decay = gamma_decay,
-                exploration_prob=max(0.1, 1 - epoch/epochs)
+                exploration_prob=exploration_prob
                 )
 
         true_q = [calc_true_exp_reward(net, transition, gamma_decay) for transition in transitions]
+
+        #######################################
+        # TEST IN SIMULATION
+        print("-----")
+        tested_worlds = play_to_test(net, world.dim, exploration_prob=0)
+        sens = sensitivity(tested_worlds)
+        print("SENSITIVITY: {}".format(sens))
+        plot_failures(tested_worlds, net.checkpoint_dir + os.path.sep + str(epoch) + "_failure-maps_network.png")
+        time.sleep(2)
 
         #######################################
         # TRAIN ON THAT DATA
@@ -643,17 +662,29 @@ def main():
         net.train(transitions, true_q)
         world.plot_q_table(net, filename="q_{}.png".format(network_dir + str(epoch + 1)))
 
+        #######################################
+        # COLLECT STATS
+        sensitivities.append(sens)
+        exploration_probs.append(exploration_prob)
+
+
     #######################################
     # TEST IN SIMULATION
     print("-----")
     tested_worlds = play_to_test(net, world.dim, exploration_prob=0)
-    print("SENSITIVITY: {}".format(sensitivity(tested_worlds)))
+    sens = sensitivity(tested_worlds)
+    sensitivities.append(sens)
+    print("SENSITIVITY: {}".format(sens))
     plot_failures(tested_worlds, net.checkpoint_dir + os.path.sep + "failure-maps_network.png")
 
+    lineplot(np.arange(len(sensitivities)), sensitivities, "Sensitivity", net.checkpoint_dir + os.path.sep + "sensitivity.png")
+    lineplot(np.arange(len(exploration_probs)), exploration_probs, "Probability of Exploration per Epoch", net.checkpoint_dir + os.path.sep + "exploration-prob.png")
+
     # TEST RANDOM CONTROL FOR COMPARISON
-    random_worlds = play_to_test(net, world.dim, exploration_prob=1)
-    print("RANDOM CONTROL: {}".format(sensitivity(random_worlds)))
-    plot_failures(random_worlds, net.checkpoint_dir + os.path.sep + "failure-maps_control.png")
+    tested_worlds = play_to_test(net, world.dim, exploration_prob=1)
+    sens = sensitivity(tested_worlds)
+    print("RANDOM CONTROL: {}".format(sens))
+    plot_failures(tested_worlds, net.checkpoint_dir + os.path.sep + "failure-maps_control.png")
     print("-----")
     world.play_simulation(net)
 
