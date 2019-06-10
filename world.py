@@ -61,7 +61,11 @@ class World():
         # test whether the world should be rendered using external module
         self.should_render = should_render
         if self.should_render:
-            self.vis = visworld.Vis(self.dim, self.BLOCKSIZE)
+            self.activate_rendering()
+
+    def activate_rendering(self):
+        self.should_render = True
+        self.vis = visworld.Vis(self.dim)
 
     def get_map(self):
         """
@@ -272,6 +276,8 @@ class World():
         if self.is_snake_out_of_bounds(verbose):
             self.snake.reward(self.OBSTACLE_SCORE)
             self.snake.die(verbose)
+            if self.should_render:
+                self.vis.end()
         elif self.is_snake_at_food(verbose):
             self.snake.reward(self.FOOD_SCORE)
             self.update_foods()
@@ -279,6 +285,8 @@ class World():
         elif self.is_snake_in_obstacle(verbose):
             self.snake.reward(self.OBSTACLE_SCORE)
             self.snake.die(verbose)
+            if self.should_render:
+                self.vis.end()
         else:
             self.snake.reward(self.EMPTY_SCORE)
 
@@ -369,6 +377,9 @@ class World():
             world_map = self.get_map()
             print("active world:")
             pprint.pprint(world_map)
+        if self.should_render:
+            self.vis.update(self)
+        elif verbose:
             time.sleep(2)
 
 def get_transitions(states, actions, rewards):
@@ -699,6 +710,9 @@ def main():
     print("RANDOM CONTROL: {}".format(sens))
     plot_failures(tested_worlds, net.checkpoint_dir + os.path.sep + "failure-maps_control.png")
     print("-----")
+
+    world.activate_rendering()
     world.play_simulation(net)
+
 
 main()
