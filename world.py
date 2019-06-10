@@ -324,7 +324,16 @@ class World():
         
         for action,ax in zip(self.snake.ACTION_SPACE, axn.flat):
             q_action = q_table[:,:,action]
-            sns.heatmap(q_action, ax=ax, vmin=-10, vmax=30, center=0, cmap="RdBu_r", linewidths=.3, cbar=True, square=True)
+            sns.heatmap(
+                    q_action,
+                    ax=ax,
+                    vmin=-10,
+                    vmax=30,
+                    center=0,
+                    cmap="RdBu_r",
+                    linewidths=.3,
+                    cbar=True,
+                    square=True)
             ax.set_title(self.snake.ACTION_SPACE_LIT[action])
             ax.set_yticks([])
             ax.set_xticks([])
@@ -338,18 +347,29 @@ class World():
 
         Args:
             net (Network): To control the world's snake.
+            exploration_prob (float): Probability of performing
+                    exploration vs exploitation.
+            verbose (bool): Whether to print descriptive output
+                    during simulation.
         """
         while self.snake.alive:
+            self.visualize(verbose)
+            self.move_snake(net, exploration_prob, verbose)
+            self.update_snake(verbose)
+
+
+    def move_snake(self, net, exploration_prob, verbose):
+        action = self.get_next_action(net, exploration_prob, verbose)
+        self.snake.set_direction(action)
+        self.snake.move()
+        return action
+
+    def visualize(self, verbose):
+        if verbose:
             world_map = self.get_map()
             print("active world:")
             pprint.pprint(world_map)
-            next_action = self.get_next_action(net, exploration_prob, verbose)
-
-            self.snake.set_direction(next_action)
-            self.snake.move()
-            self.update_snake(verbose)
             time.sleep(2)
-
 
 def get_transitions(states, actions, rewards):
     """
@@ -420,14 +440,10 @@ def play_to_train(dim, net, exploration_prob, verbose=False):
     if verbose:
         print("Let's play")
     while world.snake.alive and len(actions) < sum(dim):
-        world_map = world.get_map()
-        if verbose:
-            pprint.pprint(world_map)
+        world.visualize(verbose)
 
         state = world.get_state()
-        action = world.get_next_action(net, exploration_prob, verbose)
-        world.snake.set_direction(action)
-        world.snake.move()
+        action = world.move_snake(net, exploration_prob, verbose)
         world.update_snake(verbose)
         reward = world.snake.last_reward
         if verbose:
@@ -436,12 +452,10 @@ def play_to_train(dim, net, exploration_prob, verbose=False):
         states.append(state)
         actions.append(action)
         rewards.append(reward)
-        #if verbose:
-        #    time.sleep(2)
 
     return states, actions, rewards
 
-def play_to_test(net, dim, exploration_prob):
+def play_to_test(net, dim, exploration_prob, verbose):
     """
     Simulate snake games to determine whether
     a given network successfully steers the
@@ -457,6 +471,8 @@ def play_to_test(net, dim, exploration_prob):
             exploitation. Use 1 to properly
             assess the network's performance;
             use 0 for an entirely random control.
+        verbose (bool): Whether to print descriptive
+            output during simulation.
 
     Returns:
         List of (World, success (bool)) tuples.
@@ -470,10 +486,7 @@ def play_to_test(net, dim, exploration_prob):
         success = 0
 
         while world.snake.alive and moves < dim[0] + dim[1]:
-            world_map = world.get_map()
-            next_action = world.get_next_action(net, exploration_prob, verbose=False)
-            world.snake.set_direction(next_action)
-            world.snake.move()
+            world.move_snake(net, exploration_prob, verbose)
             moves += 1
 
             if world.is_snake_at_food(verbose=False):
@@ -649,7 +662,7 @@ def main():
         #######################################
         # TEST IN SIMULATION
         print("-----")
-        tested_worlds = play_to_test(net, world.dim, exploration_prob=0)
+        tested_worlds = play_to_test(net, world.dim, exploration_prob=0, verbose=False)
         sens = sensitivity(tested_worlds)
         print("SENSITIVITY: {}".format(sens))
         plot_failures(tested_worlds, net.checkpoint_dir + os.path.sep + str(epoch) + "_failure-maps_network.png")
@@ -671,7 +684,7 @@ def main():
     #######################################
     # TEST IN SIMULATION
     print("-----")
-    tested_worlds = play_to_test(net, world.dim, exploration_prob=0)
+    tested_worlds = play_to_test(net, world.dim, exploration_prob=0, verbose=False)
     sens = sensitivity(tested_worlds)
     sensitivities.append(sens)
     print("SENSITIVITY: {}".format(sens))
@@ -681,7 +694,7 @@ def main():
     lineplot(np.arange(len(exploration_probs)), exploration_probs, "Probability of Exploration per Epoch", net.checkpoint_dir + os.path.sep + "exploration-prob.png")
 
     # TEST RANDOM CONTROL FOR COMPARISON
-    tested_worlds = play_to_test(net, world.dim, exploration_prob=1)
+    tested_worlds = play_to_test(net, world.dim, exploration_prob=1, verbose=False)
     sens = sensitivity(tested_worlds)
     print("RANDOM CONTROL: {}".format(sens))
     plot_failures(tested_worlds, net.checkpoint_dir + os.path.sep + "failure-maps_control.png")
