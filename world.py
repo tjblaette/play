@@ -43,8 +43,9 @@ class World():
         self.FOOD_SCORE = sum(self.dim)
         # -> death must be the least optimal solution 
         self.OBSTACLE_SCORE = -self.FOOD_SCORE
-        # -> reward staying alive
-        self.EMPTY_SCORE = 1
+        # -> penalize not reaching food
+        # -> include both dimensions?
+        self.EMPTY_SCORE = -dim[0]/2
 
         # fill the world with content
         self.snake = this_snake
@@ -641,16 +642,13 @@ def main():
     
     #######################################
     # Collect training data by simulation
-    epochs = 50
-    batch_size = 200
+    epochs = 30
+    batch_size = 2000
     gamma_decay = 0.9
-    file_index = 34
-    suffix =  'opt-state-mapping'
-    suffix =  'opt-state-mapping-normalized'
-    suffix =  'opt-state-mapping-normalized-range-only'
-    suffix =  'opt-state-mapping-normalized-range-only2'
-    suffix =  'opt-state-mapping-normalized-range-only-sgd'
-    suffix =  'test-lineplots'
+    file_index = 38
+    suffix =  'score-dim-half'
+    suffix =  'score-complex'
+    suffix =  'score1'
 
     network_dir = '_'.join([str(x) for x in [file_index, dim[0], 'x', dim[1], epochs, 'x', batch_size, gamma_decay, suffix]])
     net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
