@@ -8,6 +8,7 @@ import time
 import os
 import pprint
 import seaborn as sns
+sns.set()
 import matplotlib.pyplot as plt
 import copy
 
@@ -627,6 +628,7 @@ def lineplot(x, y, title, filename):
     fig,axn = plt.subplots(1,1)
     line_plot = sns.lineplot(x=x, y=y)
     line_plot.set_title(title)
+    line_plot.set(ylim=(0,1))
     fig = line_plot.get_figure()
     fig.savefig(filename)
 
