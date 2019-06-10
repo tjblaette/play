@@ -31,7 +31,7 @@ class Network():
         masked_output = keras.layers.multiply([output, input_actions])
 
         self.model = keras.models.Model(inputs=[input_states, input_actions], outputs=masked_output)
-        self.model.compile(optimizer='adam',
+        self.model.compile(optimizer='SGD',
                 loss='mse',
                 metrics=['mae'],
                 )
