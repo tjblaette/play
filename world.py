@@ -1,5 +1,6 @@
 import sys
 import numpy as np
+import pandas as pd
 import snake
 import network
 import visworld
@@ -740,6 +741,10 @@ def main():
         net.checkpoint_dir + os.path.sep + "failure-maps_network.png")
 
 
+    #######################################
+    # SAVE STATS TO FILE
+    pd.DataFrame({network_dir: sensitivities}).to_csv(
+        net.checkpoint_dir + os.path.sep + "sensitivity.tsv", sep='\t')
     lineplot(
         np.arange(len(sensitivities)),
         sensitivities,
