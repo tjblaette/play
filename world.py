@@ -13,7 +13,13 @@ import matplotlib.pyplot as plt
 import copy
 
 class World():
-    def __init__(self, dim, this_snake=None, foods=None, obstacles=None, should_render=False):
+    def __init__(
+            self,
+            dim,
+            this_snake=None,
+            foods=None,
+            obstacles=None,
+            should_render=False):
         """
         Initialize the World and a Snake to wander it.
 
@@ -23,7 +29,7 @@ class World():
             positioned in the world, which the snake can eat.
         obstacles: List of coordinate tuples, corresponding to
             obstacles in the world, which kill the snake if it
-            moves into these. 
+            moves into these.
             ---  NOT IMPLEMENTED YET!  ----
         should_render (bool): Whether the world should be rendered
             using external module (via pygame).
@@ -41,7 +47,7 @@ class World():
         # define rewards to be given for the snake's actions
         # -> it must be worth getting food across the entire world
         self.FOOD_SCORE = sum(self.dim)
-        # -> death must be the least optimal solution 
+        # -> death must be the least optimal solution
         self.OBSTACLE_SCORE = -self.FOOD_SCORE
         # -> penalize not reaching food
         # -> include both dimensions?
@@ -60,7 +66,7 @@ class World():
         if self.obstacles is None:
             self.obstacles = []
 
-        # test whether the world should be rendered using external module
+        # check whether the world should be rendered using pygame
         self.should_render = should_render
         if self.should_render:
             self.activate_rendering()
@@ -129,13 +135,13 @@ class World():
         world_map = self.get_map()
         state = world_map.flatten()
         mapping = {
-                self.EMPTY : 0,
-                self.snake.HEAD : 1,
-                self.snake.BODY : 2,
-                self.snake.TAIL : 2,
-                self.FOOD : -1,
-                self.OBSTACLE : -2
-                }
+            self.EMPTY : 0,
+            self.snake.HEAD : 1,
+            self.snake.BODY : 2,
+            self.snake.TAIL : 2,
+            self.FOOD : -1,
+            self.OBSTACLE : -2
+            }
         state = [mapping[x] for x in state]
         state = tuple(state)
         return state
@@ -144,7 +150,7 @@ class World():
         """
         Using a given neural network, predict
         the optimal action to take in the current state
-        of the world. The optimal action is the one 
+        of the world. The optimal action is the one
         that maximizes the expected reward that is
         predicted by the network.
 
@@ -296,14 +302,14 @@ class World():
     # -> currently, q is only sampled for 1 random food pos
     def get_q_table(self, net):
         """
-        For a given world and network, calculate the expected 
+        For a given world and network, calculate the expected
         rewards / q-values of all states and actions.
 
         Args:
             network (Network): Estimates q-values.
 
         Returns:
-            A 3D numpy array with one q-value estimate per 
+            A 3D numpy array with one q-value estimate per
             possible state and action. The first two dimensions
             define the state, the third dimension the action.
         """
@@ -314,13 +320,14 @@ class World():
                 state = world2.get_state()
                 q = net.predict([state], [np.ones(world2.snake.ACTION_DIM)])
                 q_table += [q]
-        q_table = np.array(q_table).reshape(self.dim + (self.snake.ACTION_DIM,))
+        q_table = np.array(q_table)
+        q_table = q_table.reshape(self.dim + (self.snake.ACTION_DIM,))
         return q_table
 
     def plot_q_table(self, net, filename="snake_q-table.png"):
         """
         For a given world and network, plot the expected
-        rewards / q-values of all states and actions as 
+        rewards / q-values of all states and actions as
         heatmaps. Plot one 2D heatmap per possible action.
         Save all heatmaps to the same file.
 
@@ -331,19 +338,19 @@ class World():
         q_maps = []
         q_table = self.get_q_table(net)
         fig,axn = plt.subplots(2, 2)
-        
+
         for action,ax in zip(self.snake.ACTION_SPACE, axn.flat):
             q_action = q_table[:,:,action]
             sns.heatmap(
-                    q_action,
-                    ax=ax,
-                    vmin=-10,
-                    vmax=30,
-                    center=0,
-                    cmap="RdBu_r",
-                    linewidths=.3,
-                    cbar=True,
-                    square=True)
+                q_action,
+                ax=ax,
+                vmin=-10,
+                vmax=30,
+                center=0,
+                cmap="RdBu_r",
+                linewidths=.3,
+                cbar=True,
+                square=True)
             ax.set_title(self.snake.ACTION_SPACE_LIT[action])
             ax.set_yticks([])
             ax.set_xticks([])
@@ -419,8 +426,10 @@ def calc_true_exp_reward(net, transition, gamma_decay):
         actions are 0.
     """
     state, action, reward, next_state = transition
-    true_reward = reward + gamma_decay * np.amax(net.predict([next_state], [np.ones(4)]))
-    
+    true_reward = (
+        reward
+        + gamma_decay * np.amax(net.predict([next_state], [np.ones(4)])))
+
     reward_vec = np.zeros(4)
     reward_vec[action] = true_reward
     return reward_vec.tolist()
@@ -449,7 +458,7 @@ def play_to_train(dim, net, exploration_prob, verbose=False):
     states = []
     actions = []
     rewards = []
-    
+
     if verbose:
         print("Let's play")
     while world.snake.alive and len(actions) < sum(dim):
@@ -563,21 +572,20 @@ def plot_failures(tested_worlds, filename="failures.png"):
                 ["Fraction of\nfailed snakes", "Fraction of\nfailed foods"],
                 axn.flat):
             sns.heatmap(
-                    failed,
-                    ax=ax,
-                    vmin=0,
-                    vmax=1,
-                    center=0.5,
-                    cmap="YlOrRd",
-                    linewidths=.3,
-                    cbar=True,
-                    square=True)
+                failed,
+                ax=ax,
+                vmin=0,
+                vmax=1,
+                center=0.5,
+                cmap="YlOrRd",
+                linewidths=.3,
+                cbar=True,
+                square=True)
             ax.set_title(plot_title)
             ax.set_yticks([])
             ax.set_xticks([])
         plt.savefig(filename)
         plt.close(fig)
-
 
 
 def collect_training_data(dim, net, batch_size, gamma_decay, exploration_prob):
@@ -608,11 +616,7 @@ def collect_training_data(dim, net, batch_size, gamma_decay, exploration_prob):
 
     # get batch of training examples
     for _ in range(batch_size):
-        states, actions, rewards = play_to_train(
-                dim,
-                net,
-                exploration_prob=exploration_prob
-                )
+        states, actions, rewards = play_to_train(dim, net, exploration_prob)
         ep_states += states
         ep_actions += actions
         ep_rewards += rewards
@@ -645,12 +649,23 @@ def main():
     epochs = 30
     batch_size = 2000
     gamma_decay = 0.9
-    file_index = 38
-    suffix =  'score-dim-half'
-    suffix =  'score-complex'
-    suffix =  'score1'
+    file_index = 39
+    suffix =  'not-normalized'
+    suffix =  'normalized'
+    suffix =  'normalized2'
 
-    network_dir = '_'.join([str(x) for x in [file_index, dim[0], 'x', dim[1], epochs, 'x', batch_size, gamma_decay, suffix]])
+    network_dir = '_'.join(
+        [str(x) for x in [
+            file_index,
+            dim[0],
+            'x',
+            dim[1],
+            epochs,
+            'x',
+            batch_size,
+            gamma_decay,
+            suffix ]])
+
     net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
     sensitivities = []
     exploration_probs = []
@@ -661,30 +676,45 @@ def main():
 
         exploration_prob = max(0.1, 1 - epoch/epochs)
         transitions = collect_training_data(
-                dim,
-                net,
-                batch_size = batch_size,
-                gamma_decay = gamma_decay,
-                exploration_prob=exploration_prob
-                )
+            dim,
+            net,
+            batch_size,
+            gamma_decay,
+            exploration_prob)
 
-        true_q = [calc_true_exp_reward(net, transition, gamma_decay) for transition in transitions]
+        true_q = [calc_true_exp_reward(net, transition, gamma_decay)
+            for transition in transitions]
 
         #######################################
         # TEST IN SIMULATION
         print("-----")
-        tested_worlds = play_to_test(net, world.dim, exploration_prob=0, verbose=False)
+        tested_worlds = play_to_test(
+            net,
+            world.dim,
+            exploration_prob=0,
+            verbose=False)
+
         sens = sensitivity(tested_worlds)
         print("SENSITIVITY: {}".format(sens))
-        plot_failures(tested_worlds, net.checkpoint_dir + os.path.sep + str(epoch) + "_failure-maps_network.png")
+
+        plot_failures(
+            tested_worlds,
+            net.checkpoint_dir
+                + os.path.sep
+                + str(epoch)
+                + "_failure-maps_network.png")
         time.sleep(2)
 
         #######################################
         # TRAIN ON THAT DATA
         print("TRAIN")
-        world.plot_q_table(net, filename="q_{}.png".format(network_dir + str(epoch)))
+        world.plot_q_table(
+            net,
+            filename="q_{}.png".format(network_dir + str(epoch)))
         net.train(transitions, true_q)
-        world.plot_q_table(net, filename="q_{}.png".format(network_dir + str(epoch + 1)))
+        world.plot_q_table(
+            net,
+            filename="q_{}.png".format(network_dir + str(epoch + 1)))
 
         #######################################
         # COLLECT STATS
@@ -695,22 +725,48 @@ def main():
     #######################################
     # TEST IN SIMULATION
     print("-----")
-    tested_worlds = play_to_test(net, world.dim, exploration_prob=0, verbose=False)
+    tested_worlds = play_to_test(
+        net,
+        world.dim,
+        exploration_prob=0,
+        verbose=False)
+
     sens = sensitivity(tested_worlds)
     sensitivities.append(sens)
     print("SENSITIVITY: {}".format(sens))
-    plot_failures(tested_worlds, net.checkpoint_dir + os.path.sep + "failure-maps_network.png")
 
-    lineplot(np.arange(len(sensitivities)), sensitivities, "Sensitivity", net.checkpoint_dir + os.path.sep + "sensitivity.png")
-    lineplot(np.arange(len(exploration_probs)), exploration_probs, "Probability of Exploration per Epoch", net.checkpoint_dir + os.path.sep + "exploration-prob.png")
+    plot_failures(
+        tested_worlds,
+        net.checkpoint_dir + os.path.sep + "failure-maps_network.png")
 
+
+    lineplot(
+        np.arange(len(sensitivities)),
+        sensitivities,
+        "Sensitivity",
+        net.checkpoint_dir + os.path.sep + "sensitivity.png")
+    lineplot(
+        np.arange(len(exploration_probs)),
+        exploration_probs,
+        "Probability of Exploration per Epoch",
+        net.checkpoint_dir + os.path.sep + "exploration-prob.png")
+
+    #######################################
     # TEST RANDOM CONTROL FOR COMPARISON
-    tested_worlds = play_to_test(net, world.dim, exploration_prob=1, verbose=False)
+    tested_worlds = play_to_test(
+        net,
+        world.dim,
+        exploration_prob=1,
+        verbose=False)
     sens = sensitivity(tested_worlds)
     print("RANDOM CONTROL: {}".format(sens))
-    plot_failures(tested_worlds, net.checkpoint_dir + os.path.sep + "failure-maps_control.png")
+    plot_failures(
+        tested_worlds,
+        net.checkpoint_dir + os.path.sep + "failure-maps_control.png")
     print("-----")
 
+    #######################################
+    # PLAY SIMULATION WITH LEARNED NETWORK
     world.activate_rendering()
     world.play_simulation(net)
 

@@ -10,7 +10,7 @@ class Snake:
                 position in the world.
             direction (int): Direction the snake should move in,
                 must be element of self.ACTION_SPACE.
-        """      
+        """
         self.pos = [pos]
         self.alive = True
         self.grow_on_next_move = False
@@ -27,7 +27,6 @@ class Snake:
         # --> direction = action performed
         self.direction = direction
         if not self.direction:
-            # set to None, pause game on init until first direction is given
             self.direction = self.ACTION_SPACE[0]
 
         # define string representation to print to screen
@@ -79,7 +78,7 @@ class Snake:
             y += 1
         elif self.direction == 3:  #'up'
             y -= 1
-        
+
         # prepend new head
         self.pos = [(y,x)] + self.pos
         if not self.grow_on_next_move:

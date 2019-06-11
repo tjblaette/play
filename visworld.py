@@ -30,7 +30,7 @@ class Vis():
 
 
     def get_state(self):
-        state = pygame.surfarray.array2d(self.surface) #.swapaxes(0,1)
+        state = pygame.surfarray.array2d(self.surface)
         state = state[::self.BLOCKSIZE, ::self.BLOCKSIZE]
         return state
 
@@ -40,27 +40,34 @@ class Vis():
         # distinguish head once snake can grow!
         for segment in world.snake.pos:
             pygame.draw.rect(
-                    self.surface,
-                    self.COLOR_SNAKE,
-                    (segment[1]*self.BLOCKSIZE, segment[0]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE)
-                    )
+                self.surface,
+                self.COLOR_SNAKE,
+                (
+                    segment[1]*self.BLOCKSIZE,
+                    segment[0]*self.BLOCKSIZE,
+                    self.BLOCKSIZE,
+                    self.BLOCKSIZE))
 
         # draw food
         for food in world.foods:
             pygame.draw.circle(
-                    self.surface,
-                    self.COLOR_FOOD,
-                    (int(food[1]*self.BLOCKSIZE+0.5*self.BLOCKSIZE), int(food[0]*self.BLOCKSIZE+0.5*self.BLOCKSIZE)),
-                    int(self.BLOCKSIZE * 0.5)
-                    )
+                self.surface,
+                self.COLOR_FOOD,
+                (
+                    int(food[1]*self.BLOCKSIZE+0.5*self.BLOCKSIZE),
+                    int(food[0]*self.BLOCKSIZE+0.5*self.BLOCKSIZE)),
+                int(self.BLOCKSIZE * 0.5))
 
         # draw obstacles
         for obstacle in world.obstacles:
             pygame.draw.rect(
-                    self.surface,
-                    self.COLOR_OBSTACLE,
-                    (obstacle[1]*self.BLOCKSIZE, obstacle[0]*self.BLOCKSIZE, self.BLOCKSIZE, self.BLOCKSIZE)
-                    )
+                self.surface,
+                self.COLOR_OBSTACLE,
+                (
+                    obstacle[1]*self.BLOCKSIZE,
+                    obstacle[0]*self.BLOCKSIZE,
+                    self.BLOCKSIZE,
+                    self.BLOCKSIZE))
 
     def update(self, world):
         self.check_for_window_close()
