@@ -358,7 +358,7 @@ class World():
         plt.savefig(net.checkpoint_dir + os.path.sep + filename)
         plt.close(fig)
 
-    def play_simulation(self, net, exploration_prob=0, verbose=True):
+    def play_simulation(self, net, exploration_prob=0, verbose=False):
         """
         Simulate an AI-controlled game of Snake. Use exploitation
         strategy only, to always take the (predicted) optimal action.
