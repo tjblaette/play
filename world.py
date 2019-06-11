@@ -639,12 +639,17 @@ def lineplot(x, y, title, filename):
     fig.savefig(filename)
 
 
+def simulate_only(dim, network_dir):
+    world = World(dim, should_render=True)
+    net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
+    world.play_simulation(net)
+
 def main():
     #######################################
     # SETUP WORLD
     dim = (5,5)
     world = World(dim)
-    
+
     #######################################
     # Collect training data by simulation
     epochs = 30
@@ -777,3 +782,4 @@ def main():
 
 
 main()
+#simulate_only((5,5), '39_5_x_5_30_x_2000_0.9_not-normalized')
