@@ -638,6 +638,9 @@ def lineplot(x, y, title, filename):
     fig = line_plot.get_figure()
     fig.savefig(filename)
 
+def timestamp():
+    timestamp = time.time()
+    return int(timestamp)
 
 def simulate_only(dim, network_dir):
     world = World(dim, should_render=True)
@@ -670,7 +673,8 @@ def main():
             'x',
             batch_size,
             gamma_decay,
-            suffix ]])
+            suffix,
+            timestamp()]])
 
     net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
     sensitivities = []
