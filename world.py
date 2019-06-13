@@ -525,7 +525,7 @@ def play_to_test(net, dim, exploration_prob, verbose):
         moves = 0
         success = 0
 
-        while world.snake.alive and moves < dim[0] + dim[1]:
+        while world.snake.alive and moves < sum(dim):
             world.move_snake(net, exploration_prob, verbose)
             moves += 1
 
@@ -679,7 +679,7 @@ def simulate_only(dim, network_dir):
     Simulate an AI-controlled game of snake.
     """
     world = World(dim, should_render=True)
-    net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
+    net = network.Network(np.prod(dim), world.snake.ACTION_DIM, network_dir)
     world.play_simulation(net)
 
 def main():
@@ -711,7 +711,7 @@ def main():
             suffix,
             timestamp()]])
 
-    net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
+    net = network.Network(np.prod(dim), world.snake.ACTION_DIM, network_dir)
     sensitivities = []
     exploration_probs = []
 

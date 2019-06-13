@@ -1,37 +1,39 @@
 import pygame
 import sys
-from pygame.locals import *
 
 class Vis():
     def __init__(self, dim):
-        self.RED = (214, 68, 23)
-        self.GREEN = (33, 206, 151)
-        self.BLUE = (66, 134, 244)
-        self.WHITE = (255, 255, 255)
-        self.BLACK = (0, 0, 0)
-        self.LIGHT_GRAY = (239, 239, 239)
-        self.DARK_GRAY = (20, 20, 20)
-
-        self.COLOR_SNAKE = self.BLUE
-        self.COLOR_FOOD = self.GREEN
-        self.COLOR_OBSTACLE = self.BLACK
-        self.COLOR_BACKGROUND = self.DARK_GRAY
-
-        self.BLOCKSIZE = 200
-        self.dim = (dim[0] * self.BLOCKSIZE, dim[1] * self.BLOCKSIZE)
         """
         World visualization using pygame.
 
         dim (int, int): dimensions of the world to visualize.
         """
+        RED = (214, 68, 23)
+        GREEN = (33, 206, 151)
+        BLUE = (66, 134, 244)
+        WHITE = (255, 255, 255)
+        BLACK = (0, 0, 0)
+        LIGHT_GRAY = (239, 239, 239)
+        DARK_GRAY = (20, 20, 20)
+
+        self.COLOR_SNAKE = BLUE
+        self.COLOR_FOOD = GREEN
+        self.COLOR_OBSTACLE = BLACK
+        self.COLOR_BACKGROUND = DARK_GRAY
+
+        window_dim = (1000, 1000)
+        self.BLOCKSIZE = min(
+            int(window_dim[0] / dim[0]),
+            int(window_dim[1] / dim[1]))
+        window_dim = (dim[0] * self.BLOCKSIZE, dim[1] * self.BLOCKSIZE)
 
         pygame.init()
-        self.surface = pygame.display.set_mode(self.dim)
+        self.FPS = 4 # frame per second
+        self.clock = pygame.time.Clock()
+
+        self.surface = pygame.display.set_mode(window_dim)
         self.surface.fill(self.COLOR_BACKGROUND)
         pygame.display.set_caption("Let's play snake!")
-
-        self.FPS = 2
-        self.clock = pygame.time.Clock()
 
 
     def get_state(self):
@@ -97,7 +99,7 @@ class Vis():
 
     def check_for_window_close(self):
         for event in pygame.event.get():
-            if event.type == QUIT:
+            if event.type == pygame.QUIT:
                 self.end()
 
     def keep_rendering(self):
