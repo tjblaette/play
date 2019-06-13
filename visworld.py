@@ -19,6 +19,11 @@ class Vis():
 
         self.BLOCKSIZE = 200
         self.dim = (dim[0] * self.BLOCKSIZE, dim[1] * self.BLOCKSIZE)
+        """
+        World visualization using pygame.
+
+        dim (int, int): dimensions of the world to visualize.
+        """
 
         pygame.init()
         self.surface = pygame.display.set_mode(self.dim)
@@ -30,14 +35,26 @@ class Vis():
 
 
     def get_state(self):
+        """
+            ---  NOT IMPLEMENTED YET!  ----
+        TODO:
+        Return the state of the world based on
+        the pygame visualization of it. Motivation: Scale
+        state image independent of world dimension to
+        train a network that works for different world.dim.
+        """
         state = pygame.surfarray.array2d(self.surface)
         state = state[::self.BLOCKSIZE, ::self.BLOCKSIZE]
         return state
 
     def draw(self, world):
+        """
+        Create a window surface and draw / fill in  all
+        snake, food and obstacle tiles.
+        """
         self.surface.fill(self.COLOR_BACKGROUND)
         # draw snake
-        # distinguish head once snake can grow!
+        # TODO: distinguish head once snake can grow!
         for segment in world.snake.pos:
             pygame.draw.rect(
                 self.surface,
@@ -70,6 +87,9 @@ class Vis():
                     self.BLOCKSIZE))
 
     def update(self, world):
+        """
+        Show the current state of the world.
+        """
         self.check_for_window_close()
         self.draw(world)
         pygame.display.update()
@@ -85,6 +105,9 @@ class Vis():
         pass
 
     def end(self):
+        """
+        End the game, close the window.
+        """
         pygame.quit()
         sys.exit()
 

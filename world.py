@@ -31,10 +31,11 @@ class World():
         obstacles: List of coordinate tuples, corresponding to
             obstacles in the world, which kill the snake if it
             moves into these.
+
             ---  NOT IMPLEMENTED YET!  ----
+
         should_render (bool): Whether the world should be rendered
             using external module (via pygame).
-            ---  NOT IMPLEMENTED YET!  ----
         """
         # define the world
         self.dim = dim
@@ -73,6 +74,9 @@ class World():
             self.activate_rendering()
 
     def activate_rendering(self):
+        """
+        Turn on rendering of the world via pygame.
+        """
         self.should_render = True
         self.vis = visworld.Vis(self.dim)
 
@@ -377,12 +381,25 @@ class World():
 
 
     def move_snake(self, net, exploration_prob, verbose):
+        """
+        Move snake to the next field.
+
+        Returns:
+            The action (int) that was taken.
+        """
         action = self.get_next_action(net, exploration_prob, verbose)
         self.snake.set_direction(action)
         self.snake.move()
         return action
 
     def visualize(self, verbose):
+        """
+        Visualize the world, by printing it to stdout
+        and / or visualizing it using pygame.
+
+        Args:
+            verbose (bool): Whether to print the world to stdout.
+        """
         if verbose:
             world_map = self.get_map()
             print("active world:")
@@ -631,6 +648,15 @@ def collect_training_data(dim, net, batch_size, gamma_decay, exploration_prob):
     return transitions
 
 def lineplot(x, y, title, filename):
+    """
+    Plot a seaborn line plot and save it to file.
+
+    Args:
+        x ([numeric]): x-axis coordinates of the data to plot.
+        y ([numeric]): y-axis coordinates of the data to plot.
+        title (str): Plot title.
+        filename (str): File to save the plot to.
+    """
     fig,axn = plt.subplots(1,1)
     line_plot = sns.lineplot(x=x, y=y)
     line_plot.set_title(title)
@@ -639,10 +665,19 @@ def lineplot(x, y, title, filename):
     fig.savefig(filename)
 
 def timestamp():
+    """
+    Get the current timestamp.
+
+    Returns:
+        Timestamp in seconds (int).
+    """
     timestamp = time.time()
     return int(timestamp)
 
 def simulate_only(dim, network_dir):
+    """
+    Simulate an AI-controlled game of snake.
+    """
     world = World(dim, should_render=True)
     net = network.Network(dim[0]*dim[1], world.snake.ACTION_DIM, network_dir)
     world.play_simulation(net)
@@ -785,5 +820,8 @@ def main():
     world.play_simulation(net)
 
 
+# train and test a model
 main()
+
+# play an AI-controlled game
 #simulate_only((5,5), '39_5_x_5_30_x_2000_0.9_not-normalized')
