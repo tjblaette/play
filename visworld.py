@@ -28,6 +28,15 @@ class Vis():
         window_dim = (dim[0] * self.BLOCKSIZE, dim[1] * self.BLOCKSIZE)
 
         pygame.init()
+        pygame.event.set_allowed(
+            [pygame.KEYDOWN,
+             pygame.QUIT])
+        pygame.event.set_blocked(
+            [pygame.MOUSEMOTION,
+             pygame.MOUSEBUTTONDOWN,
+             pygame.MOUSEBUTTONUP,
+             pygame.KEYUP])
+
         self.FPS = 4 # frame per second
         self.clock = pygame.time.Clock()
 
@@ -92,19 +101,43 @@ class Vis():
         """
         Show the current state of the world.
         """
-        self.check_for_window_close()
         self.draw(world)
         pygame.display.update()
-        self.clock.tick(self.FPS)
 
-    def check_for_window_close(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                self.end()
 
-    def keep_rendering(self):
-        # listen to pygame events
-        pass
+    def check_for_user_input(self, world):
+        """
+        Check for user input:
+        Quit game on window close.
+        Toggle game pause on space bar.
+        Set snake direction on WASD and arrow keys.
+
+        Note: The outer for-loop should not be required but for some
+        reason pygame.event.get() returns only one key Event for me,
+        though it is supposed to return the entire queue. To compensate,
+        I call this function manually often enough to guarantee handling
+        all key presses per tick of the clock / per snake move.
+        """
+        for _ in range(10000):
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.end()
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        world.paused = not world.paused
+                    elif not world.paused:
+                        if (event.key == pygame.K_w
+                                or event.key == pygame.K_UP):
+                            world.snake.set_direction(3)
+                        if (event.key == pygame.K_s
+                                or event.key == pygame.K_DOWN):
+                            world.snake.set_direction(1)
+                        if (event.key == pygame.K_d
+                                or event.key == pygame.K_RIGHT):
+                            world.snake.set_direction(0)
+                        if (event.key == pygame.K_a
+                                or event.key == pygame.K_LEFT):
+                            world.snake.set_direction(2)
 
     def end(self):
         """

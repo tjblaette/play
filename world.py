@@ -73,6 +73,8 @@ class World():
         if self.should_render:
             self.activate_rendering()
 
+        self.paused = True
+
     def activate_rendering(self):
         """
         Turn on rendering of the world via pygame.
@@ -183,8 +185,35 @@ class World():
         """
         return random.randrange(0, self.snake.ACTION_DIM)
 
-    def get_next_action(self, network, exploration_prob, verbose):
+    def get_next_action(self, network, exploration_prob=0, verbose=False):
         """
+        Get the next action that the snake should perform
+        """
+        if network is None:
+            next_action = self.get_next_action_from_user()
+        else:
+            next_action = self.get_next_action_from_network(
+                network, exploration_prob, verbose)
+
+        return next_action
+
+
+    def get_next_action_from_user(self):
+        """
+        Allow the user to control the snake:
+        User sets the direction that the snake should move in
+        via the keyboard. This direction corresponds to the
+        action that should be performed.
+
+        Returns:
+            An action (int).
+        """
+        return self.snake.direction
+
+
+    def get_next_action_from_network(self, network, exploration_prob, verbose):
+        """
+        Allow the given network to control the snake.
         Weigh exploration vs exploitation and decide on the next
         action for the current world's state.
         Exploration = Choose a random action.
@@ -364,8 +393,10 @@ class World():
 
     def play_simulation(self, net, exploration_prob=0, verbose=False):
         """
-        Simulate an AI-controlled game of Snake. Use exploitation
-        strategy only, to always take the (predicted) optimal action.
+        Play a game of Snake, controlled by the user or a given network.
+        When given a network, use exploitation strategy only, to always
+        perform the (predicted) optimal action. For a user-controlled
+        game, set net to None.
 
         Args:
             net (Network): To control the world's snake.
@@ -376,9 +407,16 @@ class World():
         """
         while self.snake.alive:
             self.visualize(verbose)
-            self.move_snake(net, exploration_prob, verbose)
-            self.update_snake(verbose)
 
+            if self.should_render:
+                self.vis.clock.tick(self.vis.FPS)
+                self.vis.check_for_user_input(self)
+            elif verbose:
+                time.sleep(2)
+
+            if not self.paused:
+                self.move_snake(net, exploration_prob, verbose)
+                self.update_snake(verbose)
 
     def move_snake(self, net, exploration_prob, verbose):
         """
@@ -406,8 +444,6 @@ class World():
             pprint.pprint(world_map)
         if self.should_render:
             self.vis.update(self)
-        elif verbose:
-            time.sleep(2)
 
 def get_transitions(states, actions, rewards):
     """
@@ -816,8 +852,8 @@ def main():
 
     #######################################
     # PLAY SIMULATION WITH LEARNED NETWORK
-    world.activate_rendering()
-    world.play_simulation(net)
+    #world.activate_rendering()
+    #world.play_simulation(net)
 
 
 # train and test a model
@@ -825,3 +861,8 @@ main()
 
 # play an AI-controlled game
 #simulate_only((5,5), '39_5_x_5_30_x_2000_0.9_not-normalized')
+
+# play a user-controlled game
+#dim = (20,20)
+#world = World(dim, should_render=True)
+#world.play_simulation(None)
