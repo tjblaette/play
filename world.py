@@ -555,7 +555,7 @@ def play_to_test(net, dim, exploration_prob, verbose):
     """
     tested_worlds = []
 
-    for _ in range((dim[0] * dim[1]) **2 *3):
+    for _ in range(min(1000, (np.prod(dim)) **2 *3)):
         world = World(dim)
         world_at_ini = copy.deepcopy(world)
         moves = 0
