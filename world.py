@@ -445,7 +445,7 @@ class World():
         if self.should_render:
             self.vis.update(self)
 
-def get_transitions(states, actions, rewards):
+def get_transitions(states, actions, rewards, lethal_final_action):
     """
     collapse sequences of states, actions and rewards
     to individual state transitions / experiences.
@@ -462,6 +462,9 @@ def get_transitions(states, actions, rewards):
     for i in range(len(states) - 1):
         transition = (states[i], actions[i], rewards[i], states[i+1])
         transitions.append(transition)
+
+    if lethal_final_action:
+        transitions.append((states[-1], actions[-1], rewards[-1], None))
     return transitions
 
 def calc_true_exp_reward(net, transition, gamma_decay):
@@ -480,9 +483,13 @@ def calc_true_exp_reward(net, transition, gamma_decay):
         actions are 0.
     """
     state, action, reward, next_state = transition
-    true_reward = (
-        reward
-        + gamma_decay * np.amax(net.predict([next_state], [np.ones(4)])))
+
+    if next_state is None:
+        true_reward = reward
+    else:
+        true_reward = (
+            reward
+            + gamma_decay * np.amax(net.predict([next_state], [np.ones(4)])))
 
     reward_vec = np.zeros(4)
     reward_vec[action] = true_reward
@@ -529,7 +536,7 @@ def play_to_train(dim, net, exploration_prob, verbose=False):
         actions.append(action)
         rewards.append(reward)
 
-    return states, actions, rewards
+    return states, actions, rewards, not world.snake.alive
 
 def play_to_test(net, dim, exploration_prob, verbose):
     """
@@ -664,18 +671,20 @@ def collect_training_data(dim, net, batch_size, gamma_decay, exploration_prob):
     Returns:
         List of transitions: [(state, action, rewards, next_state)]
     """
-    ep_states = []
-    ep_actions = []
-    ep_rewards = []
+    transitions = []
 
     # get batch of training examples
     for _ in range(batch_size):
-        states, actions, rewards = play_to_train(dim, net, exploration_prob)
-        ep_states += states
-        ep_actions += actions
-        ep_rewards += rewards
+        states, actions, rewards, lethal_final_action = play_to_train(
+            dim,
+            net,
+            exploration_prob)
+        transitions += get_transitions(
+            states,
+            actions,
+            rewards,
+            lethal_final_action)
 
-    transitions = get_transitions(ep_states, ep_actions, ep_rewards)
     print("total transitions: {}".format(len(transitions)))
     transitions = list(set(transitions))
     print("unique transitions: {}".format(len(transitions)))
