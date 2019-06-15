@@ -739,6 +739,7 @@ def main():
     batch_size = 64
     training_iterations = 50
     gamma_decay = 0.9
+    min_exploration_prob = 0.1
     file_index = 45
     suffix =  'not-normalized'
     suffix =  'add-final-state'
@@ -770,7 +771,7 @@ def main():
         collected_data = False
 
         while not collected_data or len(replay_buffer) < batch_size:
-            exploration_prob = max(0.1, 1 - epoch/epochs)
+            exploration_prob = max(min_exploration_prob, 1 - epoch/epochs)
             transitions = collect_training_data(
                 dim,
                 net,
