@@ -735,13 +735,14 @@ def main():
 
     #######################################
     # Collect training data by simulation
-    epochs = 30
-    batch_size = 2000
+    epochs = 1000
+    batch_size = 64
+    training_iterations = 50
     gamma_decay = 0.9
-    file_index = 39
+    file_index = 45
     suffix =  'not-normalized'
-    suffix =  'normalized'
-    suffix =  'normalized2'
+    suffix =  'add-final-state'
+    suffix =  'w-replay-buffer-current-q'
 
     network_dir = '_'.join(
         [str(x) for x in [
@@ -751,6 +752,8 @@ def main():
             dim[1],
             epochs,
             'x',
+            training_iterations,
+            'x',
             batch_size,
             gamma_decay,
             suffix,
@@ -759,21 +762,26 @@ def main():
     net = network.Network(np.prod(dim), world.snake.ACTION_DIM, network_dir)
     sensitivities = []
     exploration_probs = []
+    replay_buffer = []
 
     for epoch in range(epochs):
         print("---------")
         print("Epoch {}".format(epoch))
+        collected_data = False
 
-        exploration_prob = max(0.1, 1 - epoch/epochs)
-        transitions = collect_training_data(
-            dim,
-            net,
-            batch_size,
-            gamma_decay,
-            exploration_prob)
+        while not collected_data or len(replay_buffer) < batch_size:
+            exploration_prob = max(0.1, 1 - epoch/epochs)
+            transitions = collect_training_data(
+                dim,
+                net,
+                1,
+                gamma_decay,
+                exploration_prob)
 
-        true_q = [calc_true_exp_reward(net, transition, gamma_decay)
-            for transition in transitions]
+            replay_buffer += [(transition, epoch)
+                for transition in transitions]
+            collected_data = True
+        print("Replay buffer size: {}".format(len(replay_buffer)))
 
         #######################################
         # TEST IN SIMULATION
@@ -801,7 +809,19 @@ def main():
         world.plot_q_table(
             net,
             filename="q_{}.png".format(network_dir + str(epoch)))
-        net.train(transitions, true_q)
+
+        for _ in range(training_iterations):
+            training_data_index = np.random.choice(
+                len(replay_buffer),
+                min(batch_size, len(replay_buffer)),
+                replace=False)
+            training_data = [replay_buffer[index] for index in training_data_index]
+            training_transitions, ep = zip(*training_data)
+
+            training_true_q = [calc_true_exp_reward(net, transition, gamma_decay)
+                for transition in training_transitions]
+            net.train(training_transitions, training_true_q)
+
         world.plot_q_table(
             net,
             filename="q_{}.png".format(network_dir + str(epoch + 1)))
