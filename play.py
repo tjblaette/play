@@ -18,7 +18,7 @@ def main():
 
     #######################################
     # PLAY A USER-CONTROLLED GAME
-    dim = tuple((args.width, args.height))
+    dim = tuple((args.height, args.width))
     game_world = world.World(dim, should_render=True)
     game_world.play_simulation(None)
 

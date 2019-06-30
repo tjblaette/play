@@ -39,7 +39,7 @@ class World():
         """
         # define the world
         self.dim = dim
-        width, height = self.dim
+        height, width = self.dim
 
         # define string representation of the world
         self.EMPTY = ' '
@@ -251,7 +251,7 @@ class World():
         Returns:
             Boolean.
         """
-        x,y = self.snake.pos[0]
+        y,x = self.snake.pos[0]
         height, width = self.dim
         if x < 0 or y < 0 or x >= width or y >= height:
             if verbose:

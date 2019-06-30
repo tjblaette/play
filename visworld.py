@@ -25,7 +25,7 @@ class Vis():
         self.BLOCKSIZE = min(
             int(window_dim[0] / dim[0]),
             int(window_dim[1] / dim[1]))
-        window_dim = (dim[0] * self.BLOCKSIZE, dim[1] * self.BLOCKSIZE)
+        window_dim = (dim[1] * self.BLOCKSIZE, dim[0] * self.BLOCKSIZE)
 
         pygame.init()
         pygame.event.set_allowed(
