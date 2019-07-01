@@ -1,8 +1,9 @@
 import pygame
 import sys
+import numpy as np
 
 class Vis():
-    def __init__(self, dim):
+    def __init__(self, render, dim):
         """
         World visualization using pygame.
 
@@ -21,7 +22,7 @@ class Vis():
         self.COLOR_OBSTACLE = BLACK
         self.COLOR_BACKGROUND = DARK_GRAY
 
-        window_dim = (1000, 1000)
+        window_dim = (640, 640)
         self.BLOCKSIZE = min(
             int(window_dim[0] / dim[0]),
             int(window_dim[1] / dim[1]))
@@ -37,25 +38,32 @@ class Vis():
              pygame.MOUSEBUTTONUP,
              pygame.KEYUP])
 
-        self.FPS = 4 # frame per second
-        self.clock = pygame.time.Clock()
+        self.render = render
+        if self.render:
+            self.FPS = 4 # frame per second
+            self.clock = pygame.time.Clock()
 
-        self.surface = pygame.display.set_mode(window_dim)
-        self.surface.fill(self.COLOR_BACKGROUND)
-        pygame.display.set_caption("Let's play snake!")
+            self.surface = pygame.display.set_mode(window_dim)
+            self.surface.fill(self.COLOR_BACKGROUND)
+            pygame.display.set_caption("Let's play snake!")
+        else:
+            self.surface = pygame.Surface(window_dim)
 
 
     def get_state(self):
         """
-            ---  NOT IMPLEMENTED YET!  ----
-        TODO:
         Return the state of the world based on
         the pygame visualization of it. Motivation: Scale
         state image independent of world dimension to
         train a network that works for different world.dim.
         """
-        state = pygame.surfarray.array2d(self.surface)
-        state = state[::self.BLOCKSIZE, ::self.BLOCKSIZE]
+        state = pygame.surfarray.array3d(self.surface)
+        #state = state[::self.BLOCKSIZE, ::self.BLOCKSIZE]
+        state = state[::20, ::20]
+
+        gray_state_list = [[(r*0.298 + g*0.587 + b*0.114) for (r,g,b) in col] for col in state]
+        state = np.array([[avg for avg in col] for col in gray_state_list])
+        #pygame.image.save(pygame.surfarray.make_surface(state), "game_world_gray.png")
         return state
 
     def draw(self, world):
@@ -102,7 +110,8 @@ class Vis():
         Show the current state of the world.
         """
         self.draw(world)
-        pygame.display.update()
+        if self.render:
+            pygame.display.update()
 
 
     def check_for_user_input(self, world):

@@ -70,17 +70,24 @@ class World():
 
         # check whether the world should be rendered using pygame
         self.should_render = should_render
-        if self.should_render:
-            self.activate_rendering()
-
+        self.vis = visworld.Vis(self.should_render, self.dim)
         self.paused = True
 
-    def activate_rendering(self):
+    def copy(self):
         """
-        Turn on rendering of the world via pygame.
+        Copy world with novel vis. This is necessary
+        because pygame Surface is not pickable and therefore
+        cannot be copied directly with copy.deepcopy().
+
+        Returns:
+            Copy of self.
         """
-        self.should_render = True
-        self.vis = visworld.Vis(self.dim)
+        world = World(self.dim)
+        world.snake = copy.deepcopy(self.snake)
+        world.foods = copy.deepcopy(self.foods)
+        world.obstacles = copy.deepcopy(self.obstacles)
+        world.vis = visworld.Vis(self.should_render, self.dim)
+        return world
 
     def get_map(self):
         """
@@ -128,7 +135,7 @@ class World():
         """
         return random.choice(self.all_empty_fields())
 
-    def get_state(self):
+    def get_string_state(self):
         """
         Obtain an integer representation of the world
         by converting symbols of the respective string
@@ -152,6 +159,25 @@ class World():
         state = [mapping[x] for x in state]
         state = tuple(state)
         return state
+
+    def get_vis_state(self):
+        """
+        Obtain an integer representation of the world
+        using the pygame visualization. Use this
+        representation as the _state_ of the world
+        for network learning.
+
+        Returns:
+            A flattened 1D tuple of integers.
+        """
+        state = self.vis.get_state()
+        state = tuple(state.flatten().tolist())
+        return state
+
+    def get_state(self):
+        # remember that to change this to string_state,
+        # I have to change the networks input dim
+        return self.get_vis_state()
 
     def get_optimal_action(self, net, verbose):
         """
@@ -564,7 +590,7 @@ def play_to_test(net, dim, exploration_prob, verbose):
 
     for _ in range(min(1000, (np.prod(dim)) **2 *3)):
         world = World(dim)
-        world_at_ini = copy.deepcopy(world)
+        world_at_ini = world.copy()
         moves = 0
         success = 0
 
