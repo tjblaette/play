@@ -154,6 +154,8 @@ def main():
             verbose=False)
 
         sens = world.sensitivity(tested_worlds)
+        pd.DataFrame({network_dir: sensitivities}).to_csv(
+            net.checkpoint_dir + os.path.sep + "sensitivity.tsv", sep='\t')
         print("SENSITIVITY: {}".format(sens))
 
         world.plot_failures(
