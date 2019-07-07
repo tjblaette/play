@@ -69,9 +69,10 @@ class World():
             self.obstacles = []
 
         # check whether the world should be rendered using pygame
+        self.paused = True
         self.should_render = should_render
         self.vis = visworld.Vis(self.should_render, self.dim)
-        self.paused = True
+        self.visualize(verbose=False)
 
     def copy(self):
         """
@@ -468,8 +469,7 @@ class World():
             world_map = self.get_map()
             print("active world:")
             pprint.pprint(world_map)
-        if self.should_render:
-            self.vis.update(self)
+        self.vis.update(self)
 
 def get_transitions(states, actions, rewards, lethal_final_action):
     """

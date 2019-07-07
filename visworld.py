@@ -61,8 +61,8 @@ class Vis():
         #state = state[::self.BLOCKSIZE, ::self.BLOCKSIZE]
         state = state[::20, ::20]
 
-        gray_state_list = [[(r*0.298 + g*0.587 + b*0.114) for (r,g,b) in col] for col in state]
-        state = np.array([[avg for avg in col] for col in gray_state_list])
+        state = rgb2gray(state)
+        state = state / 256.0
         #pygame.image.save(pygame.surfarray.make_surface(state), "game_world_gray.png")
         return state
 
@@ -155,3 +155,22 @@ class Vis():
         pygame.quit()
         sys.exit()
 
+
+def rgb2gray(rgb):
+    """
+    Convert 3-dimensional RGB value array to 1-dimensional
+    grayscale value array. Taken from stackoverflow:
+    https://stackoverflow.com/questions/12201577/
+            how-can-i-convert-an-rgb-image-into-grayscale-in-python
+
+    Args:
+        rgb: Numpy array with shape [,,3] containing RGB values
+            of an image.
+
+    Returns:
+        Numpy array with shape [,,1] containing grayscale values
+            of rgb input array.
+    """
+    r, g, b = rgb[:,:,0], rgb[:,:,1], rgb[:,:,2]
+    gray = 0.2989 * r + 0.5870 * g + 0.1140 * b
+    return gray
