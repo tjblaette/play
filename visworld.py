@@ -62,7 +62,7 @@ class Vis():
         state = state[::20, ::20]
 
         state = rgb2gray(state)
-        state = state / 256.0
+        state = state / 255.0
         #pygame.image.save(pygame.surfarray.make_surface(state), "game_world_gray.png")
         return state
 
