@@ -48,7 +48,7 @@ python train.py \
 ```
 
 ##### Watch an AI play
-Once you've trained an AI, watch it play but supplying the folder
+Once you've trained an AI, watch it play by supplying the folder
 which contains the saved model:
 
 ```
