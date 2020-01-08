@@ -24,7 +24,8 @@ class Network():
             model after training.
         """
         # build the model using keras functional API
-        input_states = keras.layers.Input(shape=(1024, ))
+        #input_states = keras.layers.Input(shape=(1024, ))
+        input_states = keras.layers.Input(shape=(np.product(state_space_dim), ))
         input_actions = keras.layers.Input(shape=(action_space_dim, ))
 
         hidden = keras.layers.Dense(50, activation=tf.nn.relu)(input_states)

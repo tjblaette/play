@@ -178,7 +178,8 @@ class World():
     def get_state(self):
         # remember that to change this to string_state,
         # I have to change the networks input dim
-        return self.get_vis_state()
+        #return self.get_vis_state()
+        return self.get_string_state()
 
     def get_optimal_action(self, net, verbose):
         """
