@@ -43,8 +43,13 @@ class Snake:
         Returns:
             A list of string characters.
         """
-        inner_segments = self.BODY * (len(self.pos) -2)
-        return self.HEAD + inner_segments + self.TAIL
+        if len(self.pos) == 1:
+            return self.HEAD
+        if len(self.pos) == 2:
+            return self.HEAD + self.TAIL
+        if len(self.pos) > 2:
+            inner_segments = self.BODY * (len(self.pos) -2)
+            return self.HEAD + inner_segments + self.TAIL
 
     def set_direction(self, new_direction):
         """
@@ -83,6 +88,7 @@ class Snake:
         self.pos = [(y,x)] + self.pos
         if not self.grow_on_next_move:
             del self.pos[-1]
+        self.segments = self.get_segments()
         self.grow_on_next_move = False
 
 
