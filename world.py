@@ -569,6 +569,20 @@ def play_to_train(dim, net, exploration_prob, verbose=False):
 
     return states, actions, rewards, not world.snake.alive
 
+# COMMENT
+def avrg_dist_in(dim):
+    """
+    COMMENT
+    """
+    print(dim)
+    dist = []
+    for _ in range(np.prod(dim) * 2):
+        world = World(dim)
+        snake = np.array(world.snake.pos[0])
+        food = np.array(world.foods[0])
+        dist.append(sum(abs(snake - food)))
+    print(sum(dist) / len(dist))
+
 def play_to_test(net, dim, exploration_prob, verbose):
     """
     Simulate snake games to determine whether
@@ -733,3 +747,8 @@ def simulate_only(dim, network_dir):
 
 
 
+#avrg_dist_in((2,2))
+#avrg_dist_in((3,3))
+#avrg_dist_in((4,4))
+#avrg_dist_in((5,5))
+#avrg_dist_in((10,10))
