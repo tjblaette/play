@@ -54,6 +54,7 @@ class World():
         # -> penalize not reaching food
         # -> include both dimensions?
         self.EMPTY_SCORE = -dim[0]/2
+        self.WIN_SCORE = 1000
 
         # fill the world with content
         self.snake = this_snake
@@ -343,22 +344,25 @@ class World():
         Args:
             verbose (bool): Whether to print descriptive output.
         """
-        if self.is_snake_out_of_bounds(verbose):
+        if (self.is_snake_out_of_bounds(verbose) or
+                self.is_snake_in_obstacle(verbose) or
+                self.snake.moves_since_last_eaten > sum(self.dim) * 2):
             self.snake.reward(self.OBSTACLE_SCORE)
             self.snake.die(verbose)
             if self.should_render:
                 self.vis.end()
         elif self.is_snake_at_food(verbose):
             self.snake.reward(self.FOOD_SCORE)
-            self.update_foods()
-            #self.snake.grow_on_next_move = True
-        elif self.is_snake_in_obstacle(verbose):
-            self.snake.reward(self.OBSTACLE_SCORE)
-            self.snake.die(verbose)
-            if self.should_render:
-                self.vis.end()
+            self.snake.moves_since_last_eaten = 0
+            if not self.all_empty_fields():
+                self.snake.reward(self.WIN_SCORE)
+                self.snake.win(verbose)
+            else:
+                self.update_foods()
+                self.snake.grow_on_next_move = True
         else:
             self.snake.reward(self.EMPTY_SCORE)
+            self.snake.moves_since_last_eaten += 1
 
     # properly represent food
     # -> currently, q is only sampled for 1 random food pos

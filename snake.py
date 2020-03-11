@@ -14,6 +14,7 @@ class Snake:
         self.pos = [pos]
         self.alive = True
         self.grow_on_next_move = False
+        self.moves_since_last_eaten = 0
 
         self.last_reward = None
         self.total_reward = 0
@@ -102,5 +103,17 @@ class Snake:
         """
         if verbose:
             print("You died at length {}!".format(len(self.pos)))
+        self.alive = False
+
+    def win(self, verbose):
+        """
+        End the game after the snake won.
+
+        Args:
+            verbose (bool): Whether to inform the user and
+                print the snake's length at the time of death.
+        """
+        if verbose:
+            print("You successfully finished at length {}!".format(len(self.pos)))
         self.alive = False
 
